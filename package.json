@@ -1,0 +1,29 @@
+{
+  "name": "lunchslackbot",
+  "version": "1.0.0",
+  "main": "dist/bot.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bot.js",
+    "dev": "ts-node src/bot.ts",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "slack",
+    "bot",
+    "lunch"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Slack bot for lunch place suggestions and voting",
+  "dependencies": {
+    "@slack/bolt": "^4.7.1",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.4"
+  }
+}
