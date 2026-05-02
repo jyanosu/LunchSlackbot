@@ -40,7 +40,7 @@ A Slack bot that collects lunch place suggestions, generates a poll, and lets te
 |---|---|---|
 | Framework | Slack Bolt (Node) | Official SDK, simplifies event handling and verification |
 | Config | `.env` via `dotenv` | Standard, keeps secrets out of source |
-| Hosting (Phase 1) | Local dev with `ngrok` or similar | Fastest path to a working bot |
+| Hosting | Render (Web Service) | Free tier, stable URL, env var support, auto-deploy from GitHub |
 | Poll storage | TBD (Phase 2+) | Not in scope yet |
 
 ## Invariants
@@ -56,7 +56,7 @@ A Slack bot that collects lunch place suggestions, generates a poll, and lets te
 ## Testing Strategy (Phase 1)
 
 - Unit test: `app_mention` handler replies with expected text (mock Bolt `say`).
-- Manual: verify bot responds in a real Slack workspace via ngrok tunnel.
+- Manual: verify bot responds in a real Slack workspace via Render deployment.
 
 ## Out of Scope (Phase 1)
 
