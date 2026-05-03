@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: lunch-slackbot
+    env: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_SIGNING_SECRET
+        sync: false
