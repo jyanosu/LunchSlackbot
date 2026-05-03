@@ -1,6 +1,6 @@
 # LunchBot — Phase 1 Plan
 
-Shared decisions (from spec): TypeScript, Slack Bolt, `.env` via `dotenv`, Node.js 20+, local dev with ngrok.
+Shared decisions (from spec): TypeScript, Slack Bolt, `.env` via `dotenv`, Node.js 20+, Render hosting.
 
 ---
 
@@ -91,10 +91,39 @@ npm test
 
 ---
 
+## Task 4 — Render deployment config
+
+**Goal:** Add files needed for Render to build and run the bot automatically.
+
+**Context:** Bot code and tests exist (Tasks 1–3). No deployment config yet.
+
+**Proposed Approach:**
+- Create `Procfile` with `web: node dist/bot.js` (Render Web Service entry point).
+- Add `render.yaml` (optional, for future multi-service setups — skip for now, use Render dashboard instead).
+- Ensure `package.json` has `build` command (`tsc`) and `start` command (`node dist/bot.js`).
+- Add `README.md` with deployment instructions: GitHub connect → set env vars → deploy.
+
+**Acceptance Criteria:**
+- `Procfile` exists with correct start command.
+- `package.json` scripts `build` and `start` are present and correct.
+- `README.md` documents Render deployment steps.
+
+**Spec:** short (hosting decision in spec § Decisions).
+
+**Verify:**
+```
+cat Procfile           # shows "web: node dist/bot.js"
+grep -A2 '"scripts"' package.json  # shows build + start
+```
+
+---
+
 ## Dependency order
 
 ```
 Task 1 (scaffold) → Task 2 (bot code) → Task 3 (tests)
+                                         ↓
+                                    Task 4 (Render config)
 ```
 
-Task 2 depends on Task 1's project structure. Task 3 depends on Task 2's source. No parallelism needed — total scope is ~3 focused tasks.
+Tasks 1–3 are the core bot. Task 4 depends on Tasks 1–2 (needs `dist/bot.js` and `package.json` scripts). No parallelism needed — total scope is 4 focused tasks.
