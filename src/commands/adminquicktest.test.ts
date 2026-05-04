@@ -11,6 +11,7 @@ vi.mock("../store", () => ({
 
 vi.mock("../cron", () => ({
   getClient: vi.fn(),
+  stopSchedule: vi.fn(),
 }));
 
 import * as store from "../store";
