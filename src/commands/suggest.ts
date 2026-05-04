@@ -25,6 +25,11 @@ export default async function handleSuggest({
     return;
   }
 
+  if (today.pollEnded) {
+    await say("Poll has already ended for today. Start a new round with @LunchSlackBot begin.");
+    return;
+  }
+
   const added = addSuggestion(place);
 
   if (!added) {
