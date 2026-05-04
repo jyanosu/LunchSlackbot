@@ -72,6 +72,18 @@ describe("remove command", () => {
     expect(mockAdd).not.toHaveBeenCalled();
   });
 
+  it("rejects removal when poll ended", async () => {
+    mockGetToday.mockReturnValue({
+      ...todayDay,
+      pollEnded: true,
+    });
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleRemove({ say, args: "Taco Bell", userId: "U1", channelId: "C1" });
+
+    expect(say).toHaveBeenCalledWith("Poll has already ended for today. Start a new round with @LunchSlackBot begin.");
+  });
+
   it("shows not found for non-existent place", async () => {
     mockGetToday.mockReturnValue(todayDay);
 

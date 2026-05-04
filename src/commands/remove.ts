@@ -28,6 +28,11 @@ export default async function handleRemove({
     return;
   }
 
+  if (today.pollEnded) {
+    await say("Poll has already ended for today. Start a new round with @LunchSlackBot begin.");
+    return;
+  }
+
   if (!today.suggestions.some((s) => s.toLowerCase() === place.toLowerCase())) {
     await say(`*${place}* is not in today's suggestions.`);
     return;
