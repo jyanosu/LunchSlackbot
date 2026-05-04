@@ -10,12 +10,10 @@ const KNOWN_COMMANDS = new Set([
 
 export async function handleAppMention({
   say,
-  context,
   event,
 }: {
   say: (text: string) => Promise<unknown>;
-  context?: { userId?: string; channel?: string };
-  event?: { text?: string };
+  event?: { text?: string; user?: string; channel?: string };
 }) {
   const text = event?.text ?? "";
   const { command, args } = parseCommand(text);
@@ -53,6 +51,6 @@ export async function handleAppMention({
 
   const handler = handlers[command];
   if (handler) {
-    await handler({ say, args, userId: context?.userId, channelId: context?.channel });
+    await handler({ say, args, userId: event?.user, channelId: event?.channel });
   }
 }
