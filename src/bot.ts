@@ -21,7 +21,9 @@ const app = new App({
 });
 
 app.event("app_mention", handleAppMention);
-app.event("message" as any, handleConfirmation as any);
+(app.event as any)("message", handleConfirmation);
+
+console.log("✅ Bot listeners registered: app_mention, message");
 
 // Seed store from data/lunch.json if it exists
 loadStore();
