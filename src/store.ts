@@ -338,7 +338,69 @@ export function startToday(): LunchDay | undefined {
     votingStarted: false,
   };
   setToday(day);
+
+  // Schedule suggestion reminder (5 min before deadline)
+  scheduleSuggestionReminder(day.deadline);
+
   return day;
+}
+
+/**
+ * Schedule a suggestion reminder to fire 5 minutes before the deadline.
+ * Uses setTimeout computed from wall-clock deadline.
+ */
+function scheduleSuggestionReminder(deadline: string): void {
+  try {
+    const { parseTime } = require("./time-util");
+    const { getClient } = require("./cron");
+
+    const time24 = parseTime(deadline);
+    if (!time24) {
+      console.warn(`[reminder] could not parse deadline: ${deadline}`);
+      return;
+    }
+
+    const [hours, minutes] = time24.split(":").map(Number);
+    const reminderTime = new Date();
+    reminderTime.setHours(hours, minutes - 5, 0, 0);
+    const now = new Date();
+    const delay = reminderTime.getTime() - now.getTime();
+
+    if (delay <= 0) {
+      console.log("[reminder] suggestion reminder already passed, skipping");
+      return;
+    }
+
+    console.log(`[reminder] suggestion reminder scheduled in ${Math.round(delay / 1000)}s`);
+
+    setTimeout(async () => {
+      try {
+        const client = getClient();
+        const channel = process.env.LUNCH_CHANNEL_ID;
+        if (!client || !channel) {
+          console.warn("[reminder] suggestion reminder: client or channel not available");
+          return;
+        }
+
+        // Check guards
+        const today = getToday();
+        if (!today?.started || today.votingStarted || today.pollEnded) {
+          console.log("[reminder] suggestion reminder skipped — phase changed");
+          return;
+        }
+
+        await client.chat.postMessage({
+          channel,
+          text: "⏰ *Reminder:* Lunch suggestions close in 5 minutes! Use @LunchSlackBot suggest <place> to add one.",
+        });
+        console.log("[reminder] suggestion reminder posted");
+      } catch (err) {
+        console.error("[reminder] suggestion reminder error:", err);
+      }
+    }, delay);
+  } catch (err) {
+    console.error("[reminder] failed to schedule suggestion reminder:", err);
+  }
 }
 
 /**

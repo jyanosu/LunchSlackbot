@@ -15,11 +15,26 @@ const TZ = "America/New_York";
 let beginJob: ScheduledTask | null = null;
 let voteJob: ScheduledTask | null = null;
 let endJob: ScheduledTask | null = null;
+let voteReminderJob: ScheduledTask | null = null;
 let boltApp: App | null = null;
 
 function buildCronExpression(time: string, days: string): string {
   const [hours, minutes] = time.split(":");
   return `${minutes} ${hours} * * ${days}`;
+}
+
+/**
+ * Subtract minutes from a "HH:MM" time string. Returns "HH:MM".
+ */
+function subtractMinutes(time: string, mins: number): string {
+  let [hours, minutes] = time.split(":").map(Number);
+  minutes -= mins;
+  while (minutes < 0) {
+    minutes += 60;
+    hours -= 1;
+  }
+  if (hours < 0) hours += 24;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
 async function runBegin(client: any, channel: string): Promise<void> {
@@ -58,19 +73,20 @@ async function runVote(client: any, channel: string): Promise<void> {
 
   // Import buildPollBlocks dynamically to avoid circular deps
   const { buildPollBlocks } = await import("./commands/vote");
-  const { setPollMessageTs } = await import("./store");
+  const { setPollMessageTs, getSchedule } = await import("./store");
 
-  const deadline = day.deadline || "11:45 AM";
+  const schedule = getSchedule();
+  const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
   const blocks = await buildPollBlocks(day.suggestions, undefined, client);
 
   await client.chat.postMessage({
     channel,
-    text: "🗳️ Voting is open! Check the poll below and vote using the buttons.",
+    text: `🗳️ Voting is open! Check the poll below and vote using the buttons. Voting closes at ${endTime}.`,
   });
 
   const message = await client.chat.postMessage({
     channel,
-    text: `🗳️ *Voting is open!* Deadline: ${deadline} EST`,
+    text: `🗳️ *Voting is open!* Closes at ${endTime}`,
     blocks,
   });
 
@@ -78,7 +94,7 @@ async function runVote(client: any, channel: string): Promise<void> {
     setPollMessageTs(message.ts);
   }
 
-  console.log(`[cron] vote — voting open, deadline: ${deadline}`);
+  console.log(`[cron] vote — voting open, closes at ${endTime}`);
 }
 
 async function runEnd(client: any, channel: string): Promise<void> {
@@ -118,10 +134,29 @@ ${resultsText.trim()}`;
   console.log(`[cron] end — winner: ${result.winner.place} (${result.winner.votes} votes)`);
 }
 
+async function runVoteReminder(client: any, channel: string): Promise<void> {
+  const today = getToday();
+  if (!today?.votingStarted) {
+    console.log("[cron] vote reminder skipped — voting not started");
+    return;
+  }
+  if (today.pollEnded) {
+    console.log("[cron] vote reminder skipped — poll already ended");
+    return;
+  }
+
+  await client.chat.postMessage({
+    channel,
+    text: "⏰ *Reminder:* Voting closes in 5 minutes! Vote now using the poll buttons below.",
+  });
+  console.log("[cron] vote reminder posted");
+}
+
 export function stopSchedule(): void {
   if (beginJob) { beginJob.stop(); beginJob = null; }
   if (voteJob) { voteJob.stop(); voteJob = null; }
   if (endJob) { endJob.stop(); endJob = null; }
+  if (voteReminderJob) { voteReminderJob.stop(); voteReminderJob = null; }
 }
 
 export function setBoltApp(app: App): void {
@@ -189,6 +224,20 @@ export function initSchedule(app: App): void {
         await runEnd(client, channel);
       } catch (err) {
         console.error("[cron] end error:", err);
+      }
+    },
+    { timezone: TZ }
+  );
+
+  // Vote reminder: 5 min before end
+  const reminderTime = subtractMinutes(schedule.endTime, 5);
+  voteReminderJob = cron.schedule(
+    buildCronExpression(reminderTime, schedule.days),
+    async () => {
+      try {
+        await runVoteReminder(client, channel);
+      } catch (err) {
+        console.error("[cron] vote reminder error:", err);
       }
     },
     { timezone: TZ }

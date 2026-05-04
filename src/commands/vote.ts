@@ -1,4 +1,4 @@
-import { getToday, getVotes, hasVoted, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames } from "../store";
+import { getToday, getVotes, hasVoted, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule } from "../store";
 
 const DEFAULT_DEADLINE = "11:45 AM";
 
@@ -18,11 +18,12 @@ export async function buildPollBlocks(
   clickingUserId?: string,
   client?: any
 ): Promise<Array<Record<string, unknown>>> {
+  const sorted = [...suggestions].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "accent" }));
   const blocks: Array<Record<string, unknown>> = [];
   const allVoterIds = new Set<string>();
 
   // Collect all voter IDs across all suggestions
-  for (const place of suggestions) {
+  for (const place of sorted) {
     const votes = getVotes(place);
     for (const uid of votes) {
       allVoterIds.add(uid);
@@ -49,7 +50,7 @@ export async function buildPollBlocks(
     }
   }
 
-  for (const place of suggestions) {
+  for (const place of sorted) {
     const votes = getVotes(place);
     const voteCount = votes.size;
     const voterNames = Array.from(votes)
@@ -127,14 +128,16 @@ export default async function handleVote({
   }
 
   // Post channel announcement
-  await say("🗳️ Voting is open! Check the poll below and vote using the buttons.");
+  const schedule = getSchedule();
+  const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
+  await say(`🗳️ Voting is open! Check the poll below and vote using the buttons. Voting closes at ${endTime}.`);
 
   // Build poll message
   const deadline = votingDay.deadline || DEFAULT_DEADLINE;
   const blocks = await buildPollBlocks(votingDay.suggestions, client);
 
   const message = await (say as any)({
-    text: `🗳️ *Voting is open!* Deadline: ${deadline} EST`,
+    text: `🗳️ *Voting is open!* Closes at ${endTime}`,
     blocks,
   });
 
@@ -212,13 +215,14 @@ export async function handleVoteToggle({
   }
 
   // Rebuild poll message
-  const deadline = today.deadline || DEFAULT_DEADLINE;
+  const schedule2 = getSchedule();
+  const endTime2 = schedule2.endTime ? `${schedule2.endTime} EST` : "not set";
   const blocks = await buildPollBlocks(today.suggestions, userId, client);
 
   await client.chat.update({
     channel: channelId,
     ts: messageTs,
-    text: `🗳️ *Voting is open!* Deadline: ${deadline} EST`,
+    text: `🗳️ *Voting is open!* Closes at ${endTime2}`,
     blocks,
   });
 }

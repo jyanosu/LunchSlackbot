@@ -1,4 +1,4 @@
-import { getToday, startToday, startVoting, addSuggestion, endPoll, setPollMessageTs } from "../store";
+import { getToday, startToday, startVoting, addSuggestion, endPoll, setPollMessageTs, setDeadline } from "../store";
 import { getClient } from "../cron";
 
 export default async function handleAdminQuickTest({
@@ -28,9 +28,9 @@ export default async function handleAdminQuickTest({
     return;
   }
 
-  await say("🧪 *Quick test started!* Timeline:\n- 1 min: Suggestions open\n- 6 min: Voting open\n- 11 min: Winner announced");
+  await say("🧪 *Quick test started!* Timeline:\n- 1 min: Suggestions open\n- 6 min: Suggestion reminder\n- 7 min: Voting open\n- 12 min: Voting reminder\n- 13 min: Winner announced");
 
-  // Phase 1: Begin (1 min)
+  // Phase 1: Begin (1 min) — set deadline 6 min from now so reminder fires
   setTimeout(async () => {
     try {
       const day = startToday();
@@ -39,20 +39,26 @@ export default async function handleAdminQuickTest({
         return;
       }
 
+      // Set deadline to 6 min from now so reminder fires at 5 min
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 6);
+      const deadline = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} EST`;
+      setDeadline(deadline);
+
       addSuggestion("Taco Bell");
       addSuggestion("Chipotle");
       addSuggestion("Panda Express");
 
       await client.chat.postMessage({
         channel: channelId,
-        text: `🍱 *[TEST] Lunch suggestions are open!* Deadline: ${day.deadline || "11:00 AM EST"}.`,
+        text: `🍱 *[TEST] Lunch suggestions are open!* Deadline: ${day.deadline || deadline}.`,
       });
     } catch (err) {
       console.error("[adminquicktest] begin phase error:", err);
     }
   }, 60_000);
 
-  // Phase 2: Vote (6 min)
+  // Phase 2: Vote (7 min)
   setTimeout(async () => {
     try {
       const today = getToday();
@@ -68,17 +74,20 @@ export default async function handleAdminQuickTest({
       }
 
       const { buildPollBlocks } = await import("./vote");
+      const { getSchedule } = await import("../store");
 
+      const schedule = getSchedule();
+      const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
       const blocks = await buildPollBlocks(day.suggestions, undefined, client);
 
       await client.chat.postMessage({
         channel: channelId,
-        text: "🗳️ *[TEST] Voting is open!* Vote using the buttons below.",
+        text: `🗳️ *[TEST] Voting is open!* Vote using the buttons below. Closes at ${endTime}.`,
       });
 
       const message = await client.chat.postMessage({
         channel: channelId,
-        text: `🗳️ *[TEST] Voting is open!*`,
+        text: `🗳️ *[TEST] Voting is open!* Closes at ${endTime}`,
         blocks,
       });
 
@@ -88,9 +97,9 @@ export default async function handleAdminQuickTest({
     } catch (err) {
       console.error("[adminquicktest] vote phase error:", err);
     }
-  }, 360_000);
+  }, 420_000);
 
-  // Phase 3: End (11 min)
+  // Phase 3: End (13 min)
   setTimeout(async () => {
     try {
       const result = endPoll();
@@ -122,5 +131,5 @@ ${resultsText.trim()}`;
     } catch (err) {
       console.error("[adminquicktest] end phase error:", err);
     }
-  }, 660_000);
+  }, 780_000);
 }

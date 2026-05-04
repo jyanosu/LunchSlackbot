@@ -9,6 +9,7 @@ vi.mock("../store", () => ({
   toggleVote: vi.fn(),
   setUserName: vi.fn(),
   getUserNames: vi.fn(),
+  getSchedule: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -71,6 +72,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
     await handleVote({
@@ -114,6 +116,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "9999999.111" });
 
     await handleVote({ say, userId: "U1", channelId: "C1" });
@@ -132,6 +135,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
     await handleVote({
@@ -143,7 +147,7 @@ describe("handleVote", () => {
     // First call is announcement, second is poll message
     expect(say).toHaveBeenNthCalledWith(
       1,
-      "🗳️ Voting is open! Check the poll below and vote using the buttons."
+      "🗳️ Voting is open! Check the poll below and vote using the buttons. Voting closes at 11:15 EST."
     );
     expect(say).toHaveBeenNthCalledWith(
       2,
@@ -164,6 +168,7 @@ describe("handleVoteToggle", () => {
     });
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
     const mockClient = {
       chat: { update: mockUpdate },
