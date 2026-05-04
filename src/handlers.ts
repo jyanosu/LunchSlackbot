@@ -5,6 +5,7 @@ const KNOWN_COMMANDS = new Set([
   "suggest",
   "suggestiondeadline",
   "remove",
+  "list",
   "help",
 ]);
 
@@ -46,6 +47,9 @@ export async function handleAppMention({
 
   const importRemove = (await import("./commands/remove")).default;
   handlers.remove = importRemove;
+
+  const importList = (await import("./commands/list")).default;
+  handlers.list = importList;
 
   const importHelp = (await import("./commands/help")).default;
   handlers.help = importHelp;
