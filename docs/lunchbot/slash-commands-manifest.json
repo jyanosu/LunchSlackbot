@@ -31,6 +31,18 @@
       "usage_hint": ""
     },
     {
+      "command": "/lsb-vote",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Start voting on suggestions",
+      "usage_hint": ""
+    },
+    {
+      "command": "/lsb-showpoll",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Show the current poll",
+      "usage_hint": ""
+    },
+    {
       "command": "/lsb-help",
       "url": "https://lunchslackbot.onrender.com/slack/commands",
       "description": "Show help",

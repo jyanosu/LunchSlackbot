@@ -37,6 +37,8 @@ Quick start:
 | `@LunchSlackBot suggestiondeadline <time>` | `/lsb-deadline` | Set suggestion deadline |
 | `@LunchSlackBot remove <place>` | `/lsb-remove` | Remove a suggestion |
 | `@LunchSlackBot list` | `/lsb-list` | Show today's suggestions |
+| `@LunchSlackBot vote` | `/lsb-vote` | Start voting on suggestions |
+| `@LunchSlackBot showpoll` | `/lsb-showpoll` | Show the current poll |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
 
 ## Render Deployment

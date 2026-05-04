@@ -14,6 +14,8 @@ export default async function handleHelp({
       "suggestiondeadline <time> (/lsb-deadline) - set the suggestion deadline (default 11:00 AM EST)",
       "remove <place> (/lsb-remove) - remove a suggestion from today's poll",
       "list (/lsb-list) - show today's lunch suggestions",
+      "vote (/lsb-vote) - start voting on today's suggestions",
+      "showpoll (/lsb-showpoll) - show the current poll",
       "help (/lsb-help) - show this message",
     ].join("\n")
   );
