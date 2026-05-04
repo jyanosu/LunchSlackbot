@@ -254,6 +254,33 @@ git push
 
 ---
 
+## Task 4 — Render deployment config
+
+**Goal:** Add files needed for Render to build and run the bot automatically.
+
+**Context:** Bot code and tests exist (Tasks 1–3). No deployment config yet.
+
+**Proposed Approach:**
+- Create `Procfile` with `web: node dist/bot.js` (Render Web Service entry point).
+- Add `render.yaml` (optional, for future multi-service setups — skip for now, use Render dashboard instead).
+- Ensure `package.json` has `build` command (`tsc`) and `start` command (`node dist/bot.js`).
+- Add `README.md` with deployment instructions: GitHub connect → set env vars → deploy.
+
+**Acceptance Criteria:**
+- `Procfile` exists with correct start command.
+- `package.json` scripts `build` and `start` are present and correct.
+- `README.md` documents Render deployment steps.
+
+**Spec:** short (hosting decision in spec § Decisions).
+
+**Verify:**
+```
+cat Procfile           # shows "web: node dist/bot.js"
+grep -A2 '"scripts"' package.json  # shows build + start
+```
+
+---
+
 ## Dependency order
 
 ```
