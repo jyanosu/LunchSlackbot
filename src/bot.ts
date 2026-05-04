@@ -20,6 +20,12 @@ const app = new App({
   signingSecret: SLACK_SIGNING_SECRET,
 });
 
+// Debug: log all incoming events
+app.use(async (args: any) => {
+  console.log("[debug] incoming event:", args.name, args.body?.type);
+  if (args.ack) await args.ack();
+});
+
 app.event("app_mention", handleAppMention);
 app.event("message" as any, handleConfirmation as any);
 
