@@ -18,7 +18,7 @@ export default async function handleShowmasterlist({
   }
 
   const items = Array.from(list)
-    .sort()
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "accent" }))
     .map((place, i) => `${i + 1}. ${place}`)
     .join("\n");
 

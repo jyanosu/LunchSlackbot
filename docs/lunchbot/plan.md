@@ -13,3 +13,4 @@ Phase plans are in separate files:
 | Phase 8 — Channel Announcements | [spec-phase8.md](./spec-phase8.md) | [plan-phase8.md](./plan-phase8.md) |
 | Phase 9 — End Poll, Winner Announcement & History | [spec-phase9.md](./spec-phase9.md) | [plan-phase9.md](./plan-phase9.md) |
 | Phase 10 — Automated Scheduling | [spec-phase10.md](./spec-phase10.md) | [plan-phase10.md](./plan-phase10.md) |
+| Phase 11 — Deadline Reminders | [spec-phase11.md](./spec-phase11.md) | [plan-phase11.md](./plan-phase11.md) |
