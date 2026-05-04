@@ -60,16 +60,7 @@ export async function buildPollBlocks(
     const userVoted = clickingUserId ? hasVoted(place, clickingUserId) : false;
     const buttonIcon = userVoted ? "✅" : "☐";
 
-    // Header block: suggestion name + count
-    blocks.push({
-      type: "header",
-      text: {
-        type: "plain_text",
-        text: `*${place}* (${voteCount})`,
-      },
-    });
-
-    // Actions block: toggle button
+    // Actions block: toggle button with name + count
     blocks.push({
       type: "actions",
       elements: [
@@ -77,7 +68,7 @@ export async function buildPollBlocks(
           type: "button",
           text: {
             type: "plain_text",
-            text: `${buttonIcon} ${place}`,
+            text: `${buttonIcon} ${place} (${voteCount})`,
           },
           value: place,
           action_id: "vote_toggle",
