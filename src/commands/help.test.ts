@@ -9,12 +9,12 @@ describe("help command", () => {
     expect(say).toHaveBeenCalledWith(
       [
         "🍱 *LunchBot Commands:*",
-        "begin - start the lunch poll for the day",
-        "suggest <place> - add a lunch place to today's poll",
-        "suggestiondeadline <time> - set the suggestion deadline (default 11:00 AM EST)",
-        "remove <place> - remove a suggestion from today's poll",
-        "list - show today's lunch suggestions",
-        "help - show this message",
+        "begin (/lsb-begin) - start the lunch poll for the day",
+        "suggest <place> (/lsb-suggest) - add a lunch place to today's poll",
+        "suggestiondeadline <time> (/lsb-deadline) - set the suggestion deadline (default 11:00 AM EST)",
+        "remove <place> (/lsb-remove) - remove a suggestion from today's poll",
+        "list (/lsb-list) - show today's lunch suggestions",
+        "help (/lsb-help) - show this message",
       ].join("\n")
     );
   });
