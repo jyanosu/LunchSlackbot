@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
+import { handleConfirmation } from "./commands/remove";
+import { loadStore } from "./store";
 
 const { SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET } = process.env;
 
@@ -19,6 +21,10 @@ const app = new App({
 });
 
 app.event("app_mention", handleAppMention);
+app.event("message", handleConfirmation);
+
+// Seed store from data/lunch.json if it exists
+loadStore();
 
 (async () => {
   try {
