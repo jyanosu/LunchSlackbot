@@ -28,6 +28,10 @@ export default async function handleAdminQuickTest({
     return;
   }
 
+  // Disable cron schedule during test to avoid duplicate reminders
+  const { stopSchedule } = await import("../cron");
+  stopSchedule();
+
   await say("🧪 *Quick test started!* Timeline:\n- 1 min: Suggestions open\n- 2 min: Suggestion reminder (5 min before voting)\n- 7 min: Voting open\n- 8 min: Voting reminder (5 min before winner)\n- 13 min: Winner announced");
 
   // Phase 1: Begin (1 min)
