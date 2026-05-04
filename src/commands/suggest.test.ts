@@ -1,0 +1,80 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+let mockGetToday: ReturnType<typeof vi.fn>;
+let mockAddSuggestion: ReturnType<typeof vi.fn>;
+
+vi.mock("../store", () => ({
+  getToday: vi.fn(),
+  addSuggestion: vi.fn(),
+}));
+
+import * as store from "../store";
+import handleSuggest from "./suggest";
+
+beforeEach(() => {
+  mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
+  mockAddSuggestion = store.addSuggestion as ReturnType<typeof vi.fn>;
+  vi.clearAllMocks();
+});
+
+describe("suggest command", () => {
+  it("adds a valid place and lists suggestions", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    mockAddSuggestion.mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(mockAddSuggestion).toHaveBeenCalledWith("Chipotle");
+    expect(say).toHaveBeenCalledWith(
+      "✅ Added *Chipotle*.\n\nCurrent suggestions:\n• Taco Bell"
+    );
+  });
+
+  it("shows usage hint when no place name", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "" });
+
+    expect(say).toHaveBeenCalledWith("Usage: @LunchSlackBot suggest <place>");
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("prompts to begin when round not started", async () => {
+    mockGetToday.mockReturnValue(undefined);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(say).toHaveBeenCalledWith(
+      "Lunch suggestions haven't started yet. Use @LunchSlackBot begin to start."
+    );
+    expect(mockAddSuggestion).not.toHaveBeenCalled();
+  });
+
+  it("rejects duplicate place", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    mockAddSuggestion.mockReturnValue(false);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Taco Bell" });
+
+    expect(say).toHaveBeenCalledWith("*Taco Bell* is already suggested.");
+  });
+
+  it("handles missing args entirely", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say });
+
+    expect(say).toHaveBeenCalledWith("Usage: @LunchSlackBot suggest <place>");
+  });
+});
