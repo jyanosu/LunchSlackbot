@@ -46,27 +46,27 @@ export default async function handleRemove({
 
 /**
  * Shared confirmation listener for both `begin` and `remove` commands.
- * Skips bot messages, checks for "yes" reply, executes pending action.
  */
 export async function handleConfirmation({
   event,
-  say,
+  client,
   ack,
 }: {
-  event: { user?: string; channel?: string; text?: string; bot?: boolean };
-  say: (text: string) => Promise<unknown>;
-  ack?: () => Promise<void>;
+  event: { type: string; user?: string; channel?: string; text?: string; bot_id?: string };
+  client: any;
+  ack: () => Promise<void>;
 }) {
-  if (ack) await ack();
+  await ack();
+
   console.log("[confirmation] message event received", {
     text: event.text,
-    bot: event.bot,
+    bot_id: event.bot_id,
     user: event.user,
     channel: event.channel,
   });
 
-  // Skip bot messages to avoid self-triggering
-  if (event.bot) {
+  // Skip bot messages
+  if (event.bot_id) {
     console.log("[confirmation] skipping bot message");
     return;
   }
@@ -94,9 +94,10 @@ export async function handleConfirmation({
       deadline: "11:00 AM",
       started: true,
     });
-    await say(
-      "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST."
-    );
+    await client.chat.postMessage({
+      channel: event.channel,
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+    });
     return;
   }
 
@@ -107,13 +108,18 @@ export async function handleConfirmation({
     const place = removeEntry.payload as string;
     const removed = removeSuggestion(place);
     if (removed) {
-      await say(`✅ Removed *${place}* from today's suggestions.`);
+      await client.chat.postMessage({
+        channel: event.channel,
+        text: `✅ Removed *${place}* from today's suggestions.`,
+      });
     } else {
-      await say(`Sorry, *${place}* was not found in today's suggestions.`);
+      await client.chat.postMessage({
+        channel: event.channel,
+        text: `Sorry, *${place}* was not found in today's suggestions.`,
+      });
     }
     return;
   }
 
-  // No pending confirmation — ignore
   console.log("[confirmation] no pending confirmation for this user/channel");
 }
