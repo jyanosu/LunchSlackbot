@@ -21,7 +21,7 @@ const app = new App({
 });
 
 app.event("app_mention", handleAppMention);
-app.event("message.channels" as any, handleConfirmation as any);
+app.event("message" as any, handleConfirmation as any);
 
 // Seed store from data/lunch.json if it exists
 loadStore();
