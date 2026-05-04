@@ -28,9 +28,9 @@ export default async function handleAdminQuickTest({
     return;
   }
 
-  await say("🧪 *Quick test started!* Timeline:\n- 1 min: Suggestions open\n- 6 min: Suggestion reminder\n- 7 min: Voting open\n- 12 min: Voting reminder\n- 13 min: Winner announced");
+  await say("🧪 *Quick test started!* Timeline:\n- 1 min: Suggestions open\n- 2 min: Suggestion reminder (5 min before voting)\n- 7 min: Voting open\n- 8 min: Voting reminder (5 min before winner)\n- 13 min: Winner announced");
 
-  // Phase 1: Begin (1 min) — set deadline 6 min from now so reminder fires
+  // Phase 1: Begin (1 min)
   setTimeout(async () => {
     try {
       const day = startToday();
@@ -39,24 +39,37 @@ export default async function handleAdminQuickTest({
         return;
       }
 
-      // Set deadline to 7 min from now so suggestion reminder fires at 6 min (5 min before deadline)
-      const now = new Date();
-      now.setMinutes(now.getMinutes() + 7);
-      const deadline = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} EST`;
-      setDeadline(deadline);
-
       addSuggestion("Taco Bell");
       addSuggestion("Chipotle");
       addSuggestion("Panda Express");
 
       await client.chat.postMessage({
         channel: channelId,
-        text: `🍱 *[TEST] Lunch suggestions are open!* Deadline: ${day.deadline || deadline}.`,
+        text: `🍱 *[TEST] Lunch suggestions are open!* Deadline: ${day.deadline || "11:00 AM EST"}.`,
       });
     } catch (err) {
       console.error("[adminquicktest] begin phase error:", err);
     }
   }, 60_000);
+
+  // Phase 1.5: Suggestion reminder (2 min — 5 min before voting opens at 7 min)
+  setTimeout(async () => {
+    try {
+      const today = getToday();
+      if (!today?.started || today.votingStarted || today.pollEnded) {
+        console.log("[adminquicktest] suggestion reminder skipped — phase changed");
+        return;
+      }
+
+      await client.chat.postMessage({
+        channel: channelId,
+        text: "⏰ *[TEST] Reminder:* Lunch suggestions close in 5 minutes! Use @LunchSlackBot suggest <place> to add one.",
+      });
+      console.log("[adminquicktest] suggestion reminder posted");
+    } catch (err) {
+      console.error("[adminquicktest] suggestion reminder error:", err);
+    }
+  }, 120_000);
 
   // Phase 2: Vote (7 min)
   setTimeout(async () => {
@@ -99,7 +112,7 @@ export default async function handleAdminQuickTest({
     }
   }, 420_000);
 
-  // Phase 2.5: Voting reminder (12 min — 5 min before end)
+  // Phase 2.5: Voting reminder (8 min — 5 min before winner at 13 min)
   setTimeout(async () => {
     try {
       const today = getToday();
@@ -116,7 +129,7 @@ export default async function handleAdminQuickTest({
     } catch (err) {
       console.error("[adminquicktest] voting reminder error:", err);
     }
-  }, 720_000);
+  }, 480_000);
 
   // Phase 3: End (13 min)
   setTimeout(async () => {

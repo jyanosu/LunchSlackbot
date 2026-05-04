@@ -15,6 +15,7 @@ const TZ = "America/New_York";
 let beginJob: ScheduledTask | null = null;
 let voteJob: ScheduledTask | null = null;
 let endJob: ScheduledTask | null = null;
+let suggestReminderJob: ScheduledTask | null = null;
 let voteReminderJob: ScheduledTask | null = null;
 let boltApp: App | null = null;
 
@@ -152,10 +153,33 @@ async function runVoteReminder(client: any, channel: string): Promise<void> {
   console.log("[cron] vote reminder posted");
 }
 
+async function runSuggestionReminder(client: any, channel: string): Promise<void> {
+  const today = getToday();
+  if (!today?.started) {
+    console.log("[cron] suggestion reminder skipped — round not started");
+    return;
+  }
+  if (today.votingStarted) {
+    console.log("[cron] suggestion reminder skipped — voting already started");
+    return;
+  }
+  if (today.pollEnded) {
+    console.log("[cron] suggestion reminder skipped — poll already ended");
+    return;
+  }
+
+  await client.chat.postMessage({
+    channel,
+    text: "⏰ *Reminder:* Voting opens in 5 minutes! Use @LunchSlackBot suggest <place> to add a suggestion.",
+  });
+  console.log("[cron] suggestion reminder posted");
+}
+
 export function stopSchedule(): void {
   if (beginJob) { beginJob.stop(); beginJob = null; }
   if (voteJob) { voteJob.stop(); voteJob = null; }
   if (endJob) { endJob.stop(); endJob = null; }
+  if (suggestReminderJob) { suggestReminderJob.stop(); suggestReminderJob = null; }
   if (voteReminderJob) { voteReminderJob.stop(); voteReminderJob = null; }
 }
 
@@ -229,10 +253,24 @@ export function initSchedule(app: App): void {
     { timezone: TZ }
   );
 
+  // Suggestion reminder: 5 min before voting opens
+  const suggestReminderTime = subtractMinutes(schedule.voteTime, 5);
+  suggestReminderJob = cron.schedule(
+    buildCronExpression(suggestReminderTime, schedule.days),
+    async () => {
+      try {
+        await runSuggestionReminder(client, channel);
+      } catch (err) {
+        console.error("[cron] suggestion reminder error:", err);
+      }
+    },
+    { timezone: TZ }
+  );
+
   // Vote reminder: 5 min before end
-  const reminderTime = subtractMinutes(schedule.endTime, 5);
+  const voteReminderTime = subtractMinutes(schedule.endTime, 5);
   voteReminderJob = cron.schedule(
-    buildCronExpression(reminderTime, schedule.days),
+    buildCronExpression(voteReminderTime, schedule.days),
     async () => {
       try {
         await runVoteReminder(client, channel);
