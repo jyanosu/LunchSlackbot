@@ -95,7 +95,7 @@ async function runEnd(client: any, channel: string): Promise<void> {
   }
 
   const tieNote = result.isTie ? " (tiebreaker: random)" : "";
-  let resultsText = "*Final results:**\n";
+  let resultsText = "**Final results:**\n";
 
   for (const r of result.results) {
     const winnerIcon = r.place === result.winner.place ? "🏆 " : "";
@@ -126,6 +126,10 @@ export function stopSchedule(): void {
 
 export function setBoltApp(app: App): void {
   boltApp = app;
+}
+
+export function getClient(): any {
+  return boltApp?.client ?? null;
 }
 
 export function restartSchedule(): void {

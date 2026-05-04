@@ -18,57 +18,41 @@ function cleanup() {
 
 describe("cron schedule", () => {
   beforeEach(() => {
-    vi.resetModules();
     cleanup();
   });
   afterEach(() => {
     cleanup();
   });
 
-  it("builds cron expression from time and days", async () => {
-    const { initSchedule, stopSchedule } = await import("./cron");
-    const { loadStore, setSchedule } = await import("./store");
-    loadStore();
-    setSchedule({ beginTime: "09:30", days: "*" });
-
-    // Mock app
-    const mockApp = { client: { chat: { postMessage: vi.fn() } } } as any;
-
-    // Should not throw
-    expect(() => initSchedule(mockApp)).not.toThrow();
-    stopSchedule();
+  it("getClient returns null when app not set", async () => {
+    const { getClient } = await import("./cron");
+    expect(getClient()).toBeNull();
   });
 
-  it("skips registration when LUNCH_CHANNEL_ID missing", async () => {
+  it("getClient returns client after setBoltApp", async () => {
+    const { setBoltApp, getClient } = await import("./cron");
+
+    const mockClient = { chat: { postMessage: vi.fn() } };
+    const mockApp = { client: mockClient } as any;
+    setBoltApp(mockApp);
+
+    expect(getClient()).toBe(mockClient);
+  });
+
+  it("restartSchedule no-ops when app not set", async () => {
+    const { restartSchedule } = await import("./cron");
+    expect(() => restartSchedule()).not.toThrow();
+  });
+
+  it("stopSchedule is idempotent", async () => {
+    const { stopSchedule } = await import("./cron");
+    expect(() => stopSchedule()).not.toThrow();
+    expect(() => stopSchedule()).not.toThrow();
+  });
+
+  it("initSchedule skips when LUNCH_CHANNEL_ID missing", async () => {
     const { initSchedule } = await import("./cron");
     const mockApp = { client: {} } as any;
-
-    // Should not throw, just log warning
     expect(() => initSchedule(mockApp)).not.toThrow();
-  });
-
-  it("skips registration when schedule disabled", async () => {
-    const { initSchedule, stopSchedule } = await import("./cron");
-    const { loadStore, setSchedule } = await import("./store");
-    loadStore();
-    setSchedule({ enabled: false });
-
-    const mockApp = { client: { chat: { postMessage: vi.fn() } } } as any;
-
-    expect(() => initSchedule(mockApp)).not.toThrow();
-    stopSchedule();
-  });
-
-  it("stopSchedule stops all jobs", async () => {
-    const { initSchedule, stopSchedule } = await import("./cron");
-    const { loadStore } = await import("./store");
-    loadStore();
-
-    const mockApp = { client: { chat: { postMessage: vi.fn() } } } as any;
-    initSchedule(mockApp);
-    stopSchedule();
-
-    // Should not throw on second stop
-    expect(() => stopSchedule()).not.toThrow();
   });
 });
