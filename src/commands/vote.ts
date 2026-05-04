@@ -120,6 +120,9 @@ export default async function handleVote({
   // Mark voting as started
   setVotingStarted(true);
 
+  // Post channel announcement
+  await say("🗳️ Voting is open! Check the poll below and vote using the buttons.");
+
   // Build poll message
   const deadline = today.deadline || DEFAULT_DEADLINE;
   const blocks = await buildPollBlocks(today.suggestions, client);
@@ -176,6 +179,11 @@ export async function handleVoteToggle({
   const today = getToday();
   if (!today?.votingStarted || !today.suggestions.includes(place)) {
     console.log("[vote_toggle] voting not started or unknown place");
+    return;
+  }
+
+  if (today.pollEnded) {
+    console.log("[vote_toggle] poll has ended, voting frozen");
     return;
   }
 

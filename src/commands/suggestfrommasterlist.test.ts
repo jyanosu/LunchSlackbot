@@ -165,4 +165,24 @@ describe("handleSuggestFromMasterlist", () => {
       expect.stringContaining("Already suggested (skipped):")
     );
   });
+
+  it("reply includes current suggestions list", async () => {
+    const places = ["taco bell", "chipotle", "in-n-out", "panda express", "subway", "qdoba"];
+    (store.getMasterList as ReturnType<typeof vi.fn>).mockReturnValue(new Set(places));
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["taco bell", "chipotle", "in-n-out", "panda express", "subway"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleSuggestFromMasterlist({ say });
+
+    expect(say).toHaveBeenCalledWith(
+      expect.stringContaining("Current suggestions:")
+    );
+  });
 });

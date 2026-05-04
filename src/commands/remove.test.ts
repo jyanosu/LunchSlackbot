@@ -166,7 +166,8 @@ describe("handleConfirmation", () => {
 describe("handleBlockAction", () => {
   const mockAck = vi.fn().mockResolvedValue(undefined);
   const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
-  const mockClient = { chat: { update: mockUpdate } };
+  const mockPostMessage = vi.fn().mockResolvedValue({ ok: true });
+  const mockClient = { chat: { update: mockUpdate, postMessage: mockPostMessage } };
 
   it("starts round on confirm_begin button click", async () => {
     mockCheck.mockReturnValue({ type: "begin", payload: null });
@@ -186,6 +187,10 @@ describe("handleBlockAction", () => {
     expect(mockUpdate).toHaveBeenCalledWith({
       channel: "C1",
       ts: "1234567890.123456",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+    });
+    expect(mockPostMessage).toHaveBeenCalledWith({
+      channel: "C1",
       text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
     });
   });

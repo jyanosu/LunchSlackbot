@@ -110,4 +110,21 @@ describe("suggest command", () => {
 
     expect(mockAddToMasterList).not.toHaveBeenCalled();
   });
+
+  it("reply includes newly added suggestion in list", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell", "Chipotle"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    mockAddSuggestion.mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(say).toHaveBeenCalledWith(
+      expect.stringContaining("• Chipotle")
+    );
+  });
 });

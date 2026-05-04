@@ -59,6 +59,30 @@
       "url": "https://lunchslackbot.onrender.com/slack/commands",
       "description": "Show help",
       "usage_hint": ""
+    },
+    {
+      "command": "/lsb-seedmasterlist",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Seed the master list with predefined places",
+      "usage_hint": ""
+    },
+    {
+      "command": "/lsb-suggestfrommasterlist",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Suggest random places from the master list",
+      "usage_hint": "[count]"
+    },
+    {
+      "command": "/lsb-endpoll",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "End voting and announce the winner",
+      "usage_hint": ""
+    },
+    {
+      "command": "/lsb-showhistory",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Show past lunch winners",
+      "usage_hint": ""
     }
   ]
 }

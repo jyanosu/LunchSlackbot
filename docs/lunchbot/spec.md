@@ -879,3 +879,295 @@ src/
 - Admin authentication or role checks.
 - Partial resets (e.g., clear only votes).
 - Slash command equivalent.
+
+---
+
+# Phase 8 — Channel Announcements
+
+## What
+
+Announce to the entire channel when the suggestion phase begins and when voting begins, so everyone knows the bot is active.
+
+## Context
+
+- Phase 2: `begin` command starts suggestion round after button confirmation (private confirmation flow).
+- Phase 4: `vote` command starts voting and posts poll message.
+- `say()` sends messages to the originating channel (Slack Bolt context).
+- `channelId` is available from the event/body.
+- Announcements are plain text mrkdwn messages (no blocks needed).
+
+## Requirements
+
+1. **When suggestion phase begins** — After `begin` confirmation succeeds, post a channel announcement: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: <deadline> EST.`
+2. **When voting begins** — After `vote` command starts voting, post a channel announcement before the poll message: `🗳️ Voting is open! Deadline: <deadline> EST. Use the buttons below to vote.`
+
+## Design
+
+### Suggestion phase announcement
+
+In `commands/remove.ts` `handleBlockAction` for `confirm_begin`:
+- After `setToday()` and after updating the confirmation message, post announcement via `client.chat.postMessage(channelId, announcementText)`.
+- Message order: update confirmation → post announcement.
+- `client` is already available in the `handleBlockAction` handler signature.
+- Announcement text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: <deadline> EST.`
+- Deadline from `getToday().deadline` or default `11:00 AM`.
+- Note: `@LunchSlackBot` in the announcement is plain text (won't mention the bot).
+
+### Voting announcement
+
+In `commands/vote.ts`, before posting the poll message:
+- Post announcement: `🗳️ Voting is open! Check the poll below and vote using the buttons.`
+- Deadline defaults to `11:45 AM` (included in poll message, not announcement).
+- Then post the poll message as before.
+- Slash command `/lsb-vote` routes through the same handler, so announcement is posted for both @mention and slash command invocations.
+
+### File structure
+
+```
+src/
+  commands/
+    begin.ts            — unchanged (sends confirmation button)
+    remove.ts           — add announcement after begin confirmation in handleBlockAction
+    vote.ts             — add announcement before poll message
+```
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Announcement format | Plain mrkdwn text | Simple, readable, no blocks needed |
+| Suggestion announcement | After confirmation | Only announce when round actually starts |
+| Voting announcement | Separate message before poll | Keeps poll message clean; announcement is visible |
+| Include deadline | Yes | Reminds users of the time limit |
+| Include usage hint | Yes (suggestion phase) | Helps new users know how to participate |
+
+## Invariants
+
+- Announcements are sent to the same channel that invoked the command.
+- Announcements are only sent once per phase (not on re-invocation).
+- If announcement fails (API error), the phase still starts (best-effort).
+
+## Error Behavior
+
+- `chat.postMessage` failure → best-effort, silently ignored (phase still starts).
+- Missing `channelId` → skip announcement, phase still starts.
+- `begin` already started → no announcement (existing behavior).
+- `vote` already started → no announcement (existing behavior).
+
+## Testing Strategy
+
+- Unit test: `begin` confirmation posts announcement to channel after confirmation update.
+- Unit test: `vote` command posts announcement before poll message.
+- Unit test: announcement includes deadline (suggestion phase).
+- Unit test: announcement includes usage hint (suggestion phase).
+- Unit test: missing channelId skips announcement gracefully.
+- Unit test: double invocation of `begin` doesn't post duplicate announcement (existing `started` flag protects).
+- Unit test: double invocation of `vote` doesn't post duplicate announcement (existing `votingStarted` flag protects).
+
+## Out of Scope (Phase 8)
+
+- Announcing individual suggestions as they are added.
+- Announcing voting results.
+- Customizable announcement text.
+- DM announcements.
+
+---
+
+# Phase 9 — End Poll, Winner Announcement & History
+
+## What
+
+End the voting poll, announce the winner with final results, and persist winners for history viewing.
+
+## Context
+
+- Phase 4: `vote` command starts voting, `vote_toggle` block action toggles votes.
+- Phase 8: Channel announcements for begin/vote.
+- `LunchDay` has `votingStarted` flag; no `pollEnded` flag yet.
+- Votes stored as `Record<string, string[]>` keyed by `date:place`.
+- `userNames` cache maps `userId → name`.
+- Render filesystem is ephemeral; data persisted in `data/lunch.json`.
+- Winners persist in `data/winners.json` (same pattern as existing store).
+
+## Requirements
+
+1. **`endpoll` command** — Ends voting, computes winner, posts final results announcement.
+2. **Winner determination** — Highest vote count wins. Ties broken alphabetically by place name (ascending).
+3. **Final announcement** — Posts to channel with results ordered by vote count (descending), ties by name (ascending). Shows winner prominently.
+4. **Winner history** — Persist `{ date, place, voteCount, totalVotes }` in `data/winners.json`.
+5. **`showhistory` command** — Display all past winners in reverse chronological order.
+6. **Poll frozen after end** — No further voting or results updates allowed once poll ends. `handleVoteToggle` and `showpoll` both check `pollEnded` and reject.
+7. **Slash commands** — `/lsb-endpoll`, `/lsb-showhistory`.
+
+## Design
+
+### Data model
+
+```ts
+interface LunchDay {
+  // ... existing fields
+  pollEnded?: boolean;  // true when endpoll executed
+}
+
+interface WinnerEntry {
+  date: string;       // "2025-01-15"
+  place: string;      // "Taco Bell"
+  voteCount: number;  // votes the winner received
+  totalVotes: number; // sum of all votes across all places
+}
+
+interface WinnerStore {
+  winners: WinnerEntry[];  // array, append-only
+}
+```
+
+### Store functions
+
+- `setPollEnded()` — sets `pollEnded = true` on today's `LunchDay`.
+- `getWinners()` — load `winners.json`, return `WinnerEntry[]`.
+- `addWinner(entry: WinnerEntry)` — append to winners, save.
+
+### End poll logic
+
+In `commands/endpoll.ts`:
+1. Validate: `today` exists (no round started → error), voting started, poll not already ended.
+2. Compute results: for each suggestion, count votes.
+3. Sort: descending by vote count, ascending by name for ties.
+4. Pick winner: first entry in sorted list.
+5. Save winner via `addWinner()`.
+6. Mark poll ended via `setPollEnded()`.
+7. Post final announcement via `say()`.
+
+### Final announcement format
+
+```
+🥳 *Lunch is decided!*
+
+🏆 *Taco Bell* — 5 votes
+
+---
+
+*Final results:*
+1. 🏆 Taco Bell — 5 votes
+2. Chipotle — 3 votes
+3. Panda Express — 2 votes
+```
+
+Tie (winner picked alphabetically):
+
+```
+🥳 *Lunch is decided!* (tiebreaker: alphabetical)
+
+🏆 *Chipotle* — 3 votes
+
+---
+
+*Final results:*
+1. 🏆 Chipotle — 3 votes
+1. Taco Bell — 3 votes
+3. Panda Express — 1 vote
+```
+
+### Show history format
+
+```
+📋 *Lunch History*
+
+2025-01-15: 🏆 Taco Bell (5 votes)
+2025-01-14: 🏆 Chipotle (4 votes)
+```
+
+Empty state:
+
+```
+📋 *Lunch History*
+
+No winners yet. End a poll with @LunchSlackBot endpoll to start tracking.
+```
+
+### File structure
+
+```
+src/
+  store.ts                  — add pollEnded, winners persistence
+  commands/
+    endpoll.ts              — endpoll handler
+    endpoll.test.ts         — tests
+    showhistory.ts          — showhistory handler
+    showhistory.test.ts     — tests
+```
+
+### Slash commands
+
+Register in `slash.ts`:
+- `/lsb-endpoll` → `handleEndpoll`
+- `/lsb-showhistory` → `handleShowHistory`
+
+### Help output
+
+- `endpoll (/lsb-endpoll)` — End voting and announce the winner
+- `history (/lsb-showhistory)` — Show past lunch winners
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Command name | `endpoll` | Clear, matches `vote`/`showpoll` naming |
+| Tiebreaker | Alphabetical (ascending) | Deterministic, simple |
+| Winner history | Separate `winners.json` | Survives `adminreset` |
+| History command | `history` | Shorter, natural |
+| Poll ended flag | `pollEnded` on `LunchDay` | Prevents re-voting, re-ending |
+| Results ordering | Vote count desc, name asc for ties | Winner first, rest by popularity |
+| Tie display | Same rank number | Clear visual signal of tie |
+| adminreset preserves winners | Yes | Winners are accumulated history |
+
+## Invariants
+
+- Poll can only be ended once per day (`pollEnded` flag).
+- Winner is always deterministic (alphabetical tiebreaker).
+- Winners list is append-only (never cleared by `adminreset`, no pruning).
+- Results computed from actual vote data at time of `endpoll`.
+- All suggestions appear in final results, even with 0 votes.
+- `showpoll` rejects when poll ended (no stale poll reposting).
+- `handleVoteToggle` returns early when poll ended (no further voting).
+
+## Error Behavior
+
+- No round started (`getToday()` undefined) → error: "Lunch suggestions haven't started yet. Use @LunchSlackBot begin to start."
+- `endpoll` before voting started → error: "Voting hasn't started yet. Use @LunchSlackBot vote to begin voting."
+- `endpoll` after already ended → error: "Poll has already ended for today."
+- `endpoll` with no votes → picks winner alphabetically (all tied at 0).
+- `showpoll` after poll ended → error: "Poll has already ended for today."
+- `handleVoteToggle` after poll ended → returns early silently (frozen).
+- `showhistory` with no entries → empty state message.
+- `winners.json` missing/corrupt → best-effort load, empty array.
+- `addWinner` write fails → silently ignored (best-effort).
+
+## Testing Strategy
+
+- Unit test: `setPollEnded` sets flag on today's `LunchDay`.
+- Unit test: `getWinners` returns empty array when file missing.
+- Unit test: `addWinner` appends entry and saves.
+- Unit test: `endpoll` computes winner correctly (highest votes).
+- Unit test: `endpoll` breaks tie alphabetically.
+- Unit test: `endpoll` posts final announcement with ordered results.
+- Unit test: `endpoll` rejects when no round started (getToday undefined).
+- Unit test: `endpoll` rejects when voting not started.
+- Unit test: `endpoll` rejects when poll already ended.
+- Unit test: `endpoll` saves winner to history.
+- Unit test: `endpoll` marks poll as ended.
+- Unit test: `showhistory` displays winners in reverse chronological order.
+- Unit test: `showhistory` shows empty state when no winners.
+- Unit test: `showpoll` rejects when poll ended.
+- Unit test: `handleVoteToggle` returns early when `pollEnded` is true.
+- Unit test: slash command `/lsb-endpoll` routes to handler.
+- Unit test: slash command `/lsb-showhistory` routes to handler.
+- Unit test: `resetStore` preserves winners (not cleared).
+
+## Out of Scope
+
+- Automatic poll ending at deadline (future phase with scheduled time).
+- Customizable winner announcement text.
+- Deleting individual winner entries.
+- Winner history pruning/archival (e.g., cap at 90 days — future phase).
+- Exporting history to CSV/PDF.

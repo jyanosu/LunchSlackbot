@@ -114,6 +114,35 @@ describe("handleVote", () => {
 
     expect(store.setPollMessageTs).toHaveBeenCalledWith("9999999.111");
   });
+
+  it("posts announcement before poll message", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: false,
+      suggestions: ["Taco Bell", "Chipotle"],
+      deadline: "11:45 AM",
+    });
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
+
+    await handleVote({
+      say,
+      userId: "U1",
+      channelId: "C1",
+    });
+
+    // First call is announcement, second is poll message
+    expect(say).toHaveBeenNthCalledWith(
+      1,
+      "🗳️ Voting is open! Check the poll below and vote using the buttons."
+    );
+    expect(say).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        text: expect.stringContaining("Voting is open"),
+      })
+    );
+  });
 });
 
 describe("handleVoteToggle", () => {
@@ -205,6 +234,31 @@ describe("handleVoteToggle", () => {
         channel: { id: "C1" },
         message: { ts: "1234567890.123456" },
         actions: [{ action_id: "vote_toggle", value: "Chipotle" }],
+      },
+      client: mockClient,
+    });
+
+    expect(store.toggleVote).not.toHaveBeenCalled();
+  });
+
+  it("returns early when poll ended", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: true,
+      suggestions: ["Taco Bell"],
+      deadline: "11:45 AM",
+    });
+    const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
+    const mockClient = { chat: { update: mockUpdate } };
+
+    await handleVoteToggle({
+      ack: vi.fn().mockResolvedValue(undefined),
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "vote_toggle", value: "Taco Bell" }],
       },
       client: mockClient,
     });
