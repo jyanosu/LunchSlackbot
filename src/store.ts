@@ -17,7 +17,7 @@ export interface LunchStore {
   days: Record<string, LunchDay>;
   votes: Record<string, string[]>;  // "date:place" → userId[]
   userNames: Record<string, string>;  // userId → name
-  masterList: string[];  // lowercase place names, unique (array for JSON)
+  masterList: string[];  // original case, unique (case-insensitive, array for JSON)
 }
 
 const store: LunchStore = { days: {}, votes: {}, userNames: {}, masterList: [] };
@@ -185,15 +185,20 @@ export function getMasterList(): Set<string> {
 
 export function addToMasterList(place: string): void {
   const normalized = place.toLowerCase();
-  if (!store.masterList.includes(normalized)) {
-    store.masterList.push(normalized);
+  const existing = store.masterList.findIndex(
+    (s) => s.toLowerCase() === normalized
+  );
+  if (existing === -1) {
+    store.masterList.push(place);
     saveStore();
   }
 }
 
 export function removeFromMasterList(place: string): boolean {
   const normalized = place.toLowerCase();
-  const index = store.masterList.indexOf(normalized);
+  const index = store.masterList.findIndex(
+    (s) => s.toLowerCase() === normalized
+  );
   if (index === -1) return false;
   store.masterList.splice(index, 1);
   saveStore();
