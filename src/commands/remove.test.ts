@@ -44,9 +44,20 @@ describe("remove command", () => {
     const say = vi.fn().mockResolvedValue(undefined);
     await handleRemove({ say, args: "Taco Bell", userId: "U1", channelId: "C1" });
 
-    expect(say).toHaveBeenCalledWith(
-      'Remove *Taco Bell* from today\'s suggestions? Reply with "yes" to confirm.'
-    );
+    expect(say).toHaveBeenCalledWith({
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: "Remove *Taco Bell* from today's suggestions?" },
+          accessory: {
+            type: "button",
+            text: { type: "plain_text", text: "Yes", emoji: false },
+            action_id: "confirm_remove",
+            style: "danger",
+          },
+        },
+      ],
+    });
     expect(mockAdd).toHaveBeenCalledWith("U1", "C1", "remove", "Taco Bell");
   });
 

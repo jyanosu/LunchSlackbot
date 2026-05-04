@@ -46,9 +46,21 @@ describe("begin command", () => {
     const say = vi.fn().mockResolvedValue(undefined);
     await handleBegin({ say, userId: "U123", channelId: "C123" });
 
-    expect(say).toHaveBeenCalledWith(
-      'Start lunch suggestions for today? Reply with "yes" to confirm.'
-    );
+    expect(say).toHaveBeenCalledWith({
+      text: "Start lunch suggestions for today?",
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: "Start lunch suggestions for today?" },
+          accessory: {
+            type: "button",
+            text: { type: "plain_text", text: "Yes", emoji: false },
+            action_id: "confirm_begin",
+            style: "primary",
+          },
+        },
+      ],
+    });
     expect(mockAdd).toHaveBeenCalledWith("U123", "C123", "begin", null);
   });
 
@@ -63,9 +75,21 @@ describe("begin command", () => {
     const say = vi.fn().mockResolvedValue(undefined);
     await handleBegin({ say, userId: "U123", channelId: "C123" });
 
-    expect(say).toHaveBeenCalledWith(
-      'Start lunch suggestions for today? Reply with "yes" to confirm.'
-    );
+    expect(say).toHaveBeenCalledWith({
+      text: "Start lunch suggestions for today?",
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: "Start lunch suggestions for today?" },
+          accessory: {
+            type: "button",
+            text: { type: "plain_text", text: "Yes", emoji: false },
+            action_id: "confirm_begin",
+            style: "primary",
+          },
+        },
+      ],
+    });
     expect(mockAdd).toHaveBeenCalledWith("U123", "C123", "begin", null);
   });
 

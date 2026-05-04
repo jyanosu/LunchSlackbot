@@ -24,6 +24,7 @@ app.event("app_mention", handleAppMention);
 app.message(/.*/, handleConfirmation as any);
 app.action(/confirm_/, handleBlockAction as any);
 
+
 console.log("✅ Bot listeners registered: app_mention, message");
 
 // Seed store from data/lunch.json if it exists

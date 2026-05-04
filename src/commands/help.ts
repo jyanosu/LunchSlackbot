@@ -13,6 +13,7 @@ export default async function handleHelp({
       "suggest <place> - add a lunch place to today's poll",
       "suggestiondeadline <time> - set the suggestion deadline (default 11:00 AM EST)",
       "remove <place> - remove a suggestion from today's poll",
+      "list - show today's lunch suggestions",
       "help - show this message",
     ].join("\n")
   );
