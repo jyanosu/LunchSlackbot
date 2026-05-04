@@ -168,9 +168,13 @@ async function runSuggestionReminder(client: any, channel: string): Promise<void
     return;
   }
 
+  const list = today.suggestions.length > 0
+    ? `\nCurrent suggestions: ${today.suggestions.sort((a, b) => a.localeCompare(b)).join(", ")}`
+    : "\nNo suggestions yet.";
+
   await client.chat.postMessage({
     channel,
-    text: "⏰ *Reminder:* Voting opens in 5 minutes! Use @LunchSlackBot suggest <place> to add a suggestion.",
+    text: `⏰ *Reminder:* Voting opens in 5 minutes! Use @LunchSlackBot suggest <place> to add a suggestion.${list}`,
   });
   console.log("[cron] suggestion reminder posted");
 }

@@ -65,9 +65,13 @@ export default async function handleAdminQuickTest({
         return;
       }
 
+      const list = today.suggestions.length > 0
+        ? `\nCurrent suggestions: ${today.suggestions.sort((a, b) => a.localeCompare(b)).join(", ")}`
+        : "\nNo suggestions yet.";
+
       await client.chat.postMessage({
         channel: channelId,
-        text: "⏰ *[TEST] Reminder:* Lunch suggestions close in 5 minutes! Use @LunchSlackBot suggest <place> to add one.",
+        text: `⏰ *[TEST] Reminder:* Lunch suggestions close in 5 minutes! Use @LunchSlackBot suggest <place> to add one.${list}`,
       });
       console.log("[adminquicktest] suggestion reminder posted");
     } catch (err) {
