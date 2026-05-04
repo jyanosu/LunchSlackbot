@@ -1,0 +1,40 @@
+{
+  "slash_commands": [
+    {
+      "command": "/lsb-begin",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Start lunch poll",
+      "usage_hint": ""
+    },
+    {
+      "command": "/lsb-suggest",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Add a lunch place",
+      "usage_hint": "<place>"
+    },
+    {
+      "command": "/lsb-deadline",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Set suggestion deadline",
+      "usage_hint": "<time>"
+    },
+    {
+      "command": "/lsb-remove",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Remove a suggestion",
+      "usage_hint": "<place>"
+    },
+    {
+      "command": "/lsb-list",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Show today's suggestions",
+      "usage_hint": ""
+    },
+    {
+      "command": "/lsb-help",
+      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "description": "Show help",
+      "usage_hint": ""
+    }
+  ]
+}
