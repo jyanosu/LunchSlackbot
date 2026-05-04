@@ -11,6 +11,7 @@ export interface LunchDay {
   started: boolean;
   votingStarted?: boolean;
   pollMessageTs?: string;
+  pollEnded?: boolean;
 }
 
 export interface LunchStore {
@@ -213,4 +214,64 @@ export function resetStore(): void {
   store.userNames = {};
   // masterList is preserved
   saveStore();
+}
+
+// --- Poll Ended ---
+
+export function setPollEnded(): void {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day) return;
+
+  day.pollEnded = true;
+  saveStore();
+}
+
+// --- Winner History ---
+
+const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
+
+export interface WinnerEntry {
+  date: string;
+  place: string;
+  voteCount: number;
+  totalVotes: number;
+}
+
+interface WinnerStore {
+  winners: WinnerEntry[];
+}
+
+const winnersStore: WinnerStore = { winners: [] };
+
+export function loadWinners(): void {
+  try {
+    if (fs.existsSync(WINNERS_FILE)) {
+      const raw = fs.readFileSync(WINNERS_FILE, "utf-8");
+      const data = JSON.parse(raw) as WinnerStore;
+      if (data && Array.isArray(data.winners)) {
+        winnersStore.winners = data.winners;
+      }
+    }
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+function saveWinners(): void {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(WINNERS_FILE, JSON.stringify(winnersStore, null, 2), "utf-8");
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+export function getWinners(): WinnerEntry[] {
+  return [...winnersStore.winners];
+}
+
+export function addWinner(entry: WinnerEntry): void {
+  winnersStore.winners.push(entry);
+  saveWinners();
 }

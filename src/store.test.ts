@@ -313,4 +313,81 @@ describe("store adminreset", () => {
     expect(Object.keys(saved.votes)).toHaveLength(0);
     expect(Object.keys(saved.userNames)).toHaveLength(0);
   });
+
+  // --- Poll Ended ---
+
+  it("setPollEnded sets flag on today's LunchDay", async () => {
+    const { loadStore, setToday, setPollEnded, getToday } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:45 AM", started: true, votingStarted: true });
+
+    setPollEnded();
+
+    expect(getToday()?.pollEnded).toBe(true);
+  });
+
+  // --- Winner History ---
+
+  const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
+
+  function cleanupWinners() {
+    try {
+      if (fs.existsSync(WINNERS_FILE)) fs.unlinkSync(WINNERS_FILE);
+    } catch {
+      // ignore
+    }
+  }
+
+  it("getWinners returns empty array when file missing", async () => {
+    cleanupWinners();
+    const { loadWinners, getWinners } = await import("./store");
+    loadWinners();
+    expect(getWinners()).toEqual([]);
+  });
+
+  it("getWinners returns entries from file", async () => {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(
+      WINNERS_FILE,
+      JSON.stringify({
+        winners: [
+          { date: "2025-01-14", place: "Chipotle", voteCount: 4, totalVotes: 10 },
+        ],
+      }),
+      "utf-8"
+    );
+
+    const { loadWinners, getWinners } = await import("./store");
+    loadWinners();
+    expect(getWinners()).toHaveLength(1);
+    expect(getWinners()[0].place).toBe("Chipotle");
+  });
+
+  it("addWinner appends entry and saves", async () => {
+    cleanupWinners();
+    const { loadWinners, addWinner, getWinners } = await import("./store");
+    loadWinners();
+
+    addWinner({ date: "2025-01-15", place: "Taco Bell", voteCount: 5, totalVotes: 12 });
+
+    expect(getWinners()).toHaveLength(1);
+    expect(getWinners()[0].place).toBe("Taco Bell");
+    expect(fs.existsSync(WINNERS_FILE)).toBe(true);
+  });
+
+  it("resetStore preserves winners (not cleared)", async () => {
+    cleanupWinners();
+    const { loadStore, loadWinners, addWinner, getWinners, resetStore, setToday } = await import("./store");
+    loadStore();
+    loadWinners();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    addWinner({ date: today, place: "Taco Bell", voteCount: 5, totalVotes: 10 });
+
+    resetStore();
+
+    expect(getWinners()).toHaveLength(1);
+    expect(getWinners()[0].place).toBe("Taco Bell");
+  });
 });

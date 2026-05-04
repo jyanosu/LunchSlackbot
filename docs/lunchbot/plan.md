@@ -843,3 +843,173 @@ P7-1 (suggestfrommasterlist command)
 ```
 
 Single task — self-contained.
+
+---
+
+# Phase 8 Plan — Channel Announcements
+
+Shared decisions (from spec): Announce to channel when suggestion phase begins and when voting begins. Plain mrkdwn text. Best-effort (phase still starts if announcement fails).
+
+## Task P8-1: Add channel announcements for begin and vote
+
+**Goal:** Post channel announcements when suggestion phase begins and when voting begins.
+
+**Context:**
+- `commands/begin.ts` sends confirmation button
+- `commands/remove.ts` `handleBlockAction` handles `confirm_begin` → calls `setToday()`
+- `commands/vote.ts` `handleVote` marks voting started, posts poll message
+- `client.chat.postMessage()` sends messages to a channel
+- `channelId` available from confirmation context and vote command context
+
+**Proposed Approach:**
+- In `commands/remove.ts` `handleBlockAction` for `confirm_begin`:
+  - After `setToday()` and after updating the confirmation message, post announcement via `client.chat.postMessage(channelId, text)`
+  - Message order: update confirmation → post announcement
+  - `client` is already available in the handler signature
+  - Text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: <deadline> EST.`
+  - Deadline from `getToday().deadline` or default `11:00 AM`
+  - Best-effort: wrap in try/catch, silently ignore failures
+- In `commands/vote.ts` `handleVote`:
+  - Before posting poll message, post announcement via `say()`
+  - Text: `🗳️ Voting is open! Check the poll below and vote using the buttons.`
+  - Deadline is in the poll message itself (not duplicated in announcement)
+  - Slash command `/lsb-vote` routes through same handler, announcement posted for both
+
+**Acceptance Criteria:**
+- `begin` confirmation posts announcement after confirmation update, with deadline and usage hint
+- `vote` command posts announcement before poll message (no deadline duplication)
+- Suggestion announcement includes deadline
+- Missing channelId skips announcement gracefully
+- Announcement failure doesn't block phase start
+- Double invocation doesn't post duplicate announcements (existing flags protect)
+
+**Spec:** `none` (defined in spec.md Phase 8)
+
+**Verify:** `npm run build && npm test`
+
+**Out of Scope:**
+- Announcing individual suggestions
+- Announcing voting results
+- Customizable announcement text
+- DM announcements
+
+## Dependency Graph
+
+```
+P8-1 (channel announcements)
+```
+
+Single task — self-contained.
+
+---
+
+# Phase 9 Plan — End Poll, Winner Announcement & History
+
+Shared decisions (from spec): `endpoll` command ends voting and announces winner, ties broken alphabetically ascending, winners persist in `data/winners.json` (append-only, survives `adminreset`), `pollEnded` flag on `LunchDay` freezes voting, `history` command shows past winners reverse-chronological.
+
+## Task P9-1: Extend store with pollEnded and winners persistence
+
+**Goal:** Add `pollEnded` flag to `LunchDay` and winners persistence layer.
+
+**Context:**
+- `store.ts` has `LunchDay` with `votingStarted`, `pollMessageTs`
+- Store persists to `data/lunch.json` via `saveStore()`
+- Winners persist separately in `data/winners.json` (survives `adminreset`)
+
+**Proposed Approach:**
+- Add `pollEnded?: boolean` to `LunchDay` interface
+- Add `setPollEnded(): void` — sets `pollEnded = true` on today's `LunchDay`, saves
+- Create `WinnerEntry` interface: `{ date, place, voteCount, totalVotes }`
+- Add `getWinners(): WinnerEntry[]` — load `data/winners.json`, return array (empty if missing/corrupt)
+- Add `addWinner(entry: WinnerEntry): void` — append to winners array, save
+- In `resetStore()`, do **not** clear winners
+- Tests: setPollEnded, getWinners empty, getWinners from file, addWinner, resetStore preserves winners
+
+**Acceptance Criteria:**
+- `setPollEnded` marks today's poll as ended and persists
+- `getWinners` loads from JSON, empty on missing/corrupt
+- `addWinner` appends and persists
+- `resetStore` does not clear winners
+- All existing tests pass
+
+**Spec:** `none`
+
+**Verify:** `npm run build && npm test`
+
+## Task P9-2: Create endpoll command with winner announcement
+
+**Goal:** `endpoll` ends voting, computes winner, posts final results, saves winner.
+
+**Context:**
+- Store has `pollEnded`, `getWinners`, `addWinner`, `setPollEnded` from P9-1
+- `getVotes(place)` returns Set of userIds
+- `handleVoteToggle` in `vote.ts` needs `pollEnded` freeze
+
+**Proposed Approach:**
+- Create `commands/endpoll.ts`:
+  - Validate: `today` exists (no round started → error), voting started, poll not already ended
+  - Compute results: count votes per suggestion
+  - Sort: desc by votes, asc by name for ties
+  - Pick winner: first in sorted list
+  - Save winner, mark poll ended, post final announcement
+  - Tie display: same rank number, "(tiebreaker: alphabetical)" in header
+- Add `endpoll` to `KNOWN_COMMANDS` + `routeCommand`
+- In `handleVoteToggle`: return early when `pollEnded`
+- In `showpoll`: reject when `pollEnded`
+- Tests: winner computation, tie-breaking, announcement format, rejection paths (including no round started), history save, poll freeze, showpoll freeze
+
+**Acceptance Criteria:**
+- Winner computed correctly (highest votes)
+- Ties broken alphabetically
+- Final announcement shows ordered results
+- Winner saved to history
+- Poll marked as ended
+- Rejects when no round started
+- Rejects when voting not started or already ended
+- `handleVoteToggle` returns early when poll ended
+- `showpoll` rejects when poll ended
+- All existing tests pass
+
+**Spec:** `none`
+
+**Verify:** `npm run build && npm test`
+
+## Task P9-3: Create showhistory command + slash commands + help
+
+**Goal:** `showhistory` displays past winners, slash commands, help update.
+
+**Context:**
+- Store has `getWinners()` from P9-1
+- `handlers.ts` routes commands, `slash.ts` registers slash commands
+
+**Proposed Approach:**
+- Create `commands/showhistory.ts` — reverse-chronological display, empty state
+- Add `showhistory` to `KNOWN_COMMANDS` + `routeCommand`
+- Add `/lsb-endpoll`, `/lsb-showhistory` in `slash.ts`
+- Update `help.ts`: `endpoll (/lsb-endpoll)`, `history (/lsb-showhistory)`
+- Update `slash-commands-manifest.json`, `README.md`, `docs/lunchbot/README.md`
+- Tests: showhistory display, empty state, slash routing
+
+**Acceptance Criteria:**
+- `showhistory` displays winners reverse-chronological
+- `showhistory` shows empty state
+- Slash commands route correctly
+- Help output includes new entries
+- All existing tests pass
+
+**Spec:** `none`
+
+**Verify:** `npm run build && npm test`
+
+## Dependency Graph
+
+```
+P9-1 (store: pollEnded + winners)
+  ↓         ↓
+P9-2       P9-3
+(endpoll  (showhistory
+ + freeze) + slash cmds
+           + help)
+```
+
+P9-1 is first (store functions needed by both). P9-2 and P9-3 run in parallel — P9-3 only needs `getWinners()` from P9-1, not P9-2's endpoll command.

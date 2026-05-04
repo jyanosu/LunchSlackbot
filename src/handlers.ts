@@ -14,6 +14,8 @@ export const KNOWN_COMMANDS = new Set([
   "adminreset",
   "seedmasterlist",
   "suggestfrommasterlist",
+  "endpoll",
+  "showhistory",
 ]);
 
 export interface CommandContext {
@@ -39,6 +41,8 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.adminreset = (await import("./commands/adminreset")).default;
   handlers.seedmasterlist = (await import("./commands/seedmasterlist")).default;
   handlers.suggestfrommasterlist = (await import("./commands/suggestfrommasterlist")).default;
+  handlers.endpoll = (await import("./commands/endpoll")).default;
+  handlers.showhistory = (await import("./commands/showhistory")).default;
 
   return handlers;
 }

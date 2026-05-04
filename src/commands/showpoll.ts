@@ -29,6 +29,11 @@ export default async function handleShowpoll({
     return;
   }
 
+  if (today.pollEnded) {
+    await say("Poll has already ended for today.");
+    return;
+  }
+
   const deadline = today.deadline || DEFAULT_DEADLINE;
   const blocks = await buildPollBlocks(today.suggestions, userId, client);
 

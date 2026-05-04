@@ -51,4 +51,24 @@ export function registerSlashCommands(app: App) {
     await ack();
     await routeCommand("removefrommasterlist", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
   });
+
+  app.command("/lsb-seedmasterlist", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("seedmasterlist", { say, args: "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-suggestfrommasterlist", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("suggestfrommasterlist", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-endpoll", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("endpoll", { say, args: "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-showhistory", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("showhistory", { say, args: "", userId: body.user_id, channelId: body.channel_id });
+  });
 }

@@ -18,6 +18,8 @@ export default async function handleHelp({
       "showpoll (/lsb-showpoll) - show the current poll",
       "showmasterlist (/lsb-showmasterlist) - show the master suggestion list",
       "removefrommasterlist <place> (/lsb-removefrommasterlist) - remove from master list",
+      "endpoll (/lsb-endpoll) - end voting and announce the winner",
+      "history (/lsb-showhistory) - show past lunch winners",
       "help (/lsb-help) - show this message",
     ].join("\n")
   );

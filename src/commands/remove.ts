@@ -194,6 +194,15 @@ export async function handleBlockAction({
         ts: messageTs,
         text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
       });
+      // Post channel announcement (best-effort)
+      try {
+        await client.chat.postMessage({
+          channel: channelId,
+          text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+        });
+      } catch {
+        // best-effort, silently ignore
+      }
       return;
     }
   }

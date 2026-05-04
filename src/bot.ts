@@ -3,7 +3,7 @@ import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
 import { handleConfirmation, handleBlockAction } from "./commands/remove";
 import { handleVoteToggle } from "./commands/vote";
-import { loadStore } from "./store";
+import { loadStore, loadWinners } from "./store";
 import { registerSlashCommands } from "./slash";
 
 const { SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET } = process.env;
@@ -33,6 +33,7 @@ console.log("✅ Bot listeners registered: app_mention, message, slash commands"
 
 // Seed store from data/lunch.json if it exists
 loadStore();
+loadWinners();
 
 (async () => {
   try {

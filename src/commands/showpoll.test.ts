@@ -79,4 +79,19 @@ describe("handleShowpoll", () => {
 
     expect(store.setPollMessageTs).toHaveBeenCalledWith("8888888.999");
   });
+
+  it("rejects when poll ended", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: true,
+      suggestions: ["Taco Bell"],
+      deadline: "11:45 AM",
+    });
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleShowpoll({ say });
+
+    expect(say).toHaveBeenCalledWith("Poll has already ended for today.");
+  });
 });
