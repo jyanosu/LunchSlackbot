@@ -23,12 +23,14 @@ describe("registerSlashCommands", () => {
 
     registerSlashCommands(mockApp);
 
-    expect(mockApp.command).toHaveBeenCalledTimes(6);
+    expect(mockApp.command).toHaveBeenCalledTimes(8);
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-begin", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-suggest", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-deadline", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-remove", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-list", expect.any(Function));
+    expect(mockApp.command).toHaveBeenCalledWith("/lsb-vote", expect.any(Function));
+    expect(mockApp.command).toHaveBeenCalledWith("/lsb-showpoll", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-help", expect.any(Function));
   });
 
@@ -115,6 +117,66 @@ describe("registerSlashCommands", () => {
     });
 
     expect(mockRouteCommand).toHaveBeenCalledWith("suggest", {
+      say: mockSay,
+      args: "",
+      userId: "U1",
+      channelId: "C1",
+    });
+  });
+
+  it("/lsb-vote routes to vote command", async () => {
+    const mockApp = {
+      command: vi.fn(),
+    } as unknown as App;
+
+    registerSlashCommands(mockApp);
+
+    const voteCall = (mockApp.command as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: any[]) => call[0] === "/lsb-vote"
+    )!;
+    const voteHandler = voteCall[1];
+
+    const mockAck = vi.fn().mockResolvedValue(undefined);
+    const mockSay = vi.fn().mockResolvedValue(undefined);
+
+    await voteHandler({
+      ack: mockAck,
+      say: mockSay,
+      body: { text: "", user_id: "U1", channel_id: "C1" },
+    });
+
+    expect(mockAck).toHaveBeenCalled();
+    expect(mockRouteCommand).toHaveBeenCalledWith("vote", {
+      say: mockSay,
+      args: "",
+      userId: "U1",
+      channelId: "C1",
+    });
+  });
+
+  it("/lsb-showpoll routes to showpoll command", async () => {
+    const mockApp = {
+      command: vi.fn(),
+    } as unknown as App;
+
+    registerSlashCommands(mockApp);
+
+    const showpollCall = (mockApp.command as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call: any[]) => call[0] === "/lsb-showpoll"
+    )!;
+    const showpollHandler = showpollCall[1];
+
+    const mockAck = vi.fn().mockResolvedValue(undefined);
+    const mockSay = vi.fn().mockResolvedValue(undefined);
+
+    await showpollHandler({
+      ack: mockAck,
+      say: mockSay,
+      body: { text: "", user_id: "U1", channel_id: "C1" },
+    });
+
+    expect(mockAck).toHaveBeenCalled();
+    expect(mockRouteCommand).toHaveBeenCalledWith("showpoll", {
       say: mockSay,
       args: "",
       userId: "U1",

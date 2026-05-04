@@ -9,13 +9,17 @@ export interface LunchDay {
   suggestions: string[];
   deadline: string;
   started: boolean;
+  votingStarted?: boolean;
+  pollMessageTs?: string;
 }
 
 export interface LunchStore {
   days: Record<string, LunchDay>;
+  votes: Record<string, string[]>;  // "date:place" → userId[]
+  userNames: Record<string, string>;  // userId → name
 }
 
-const store: LunchStore = { days: {} };
+const store: LunchStore = { days: {}, votes: {}, userNames: {} };
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -30,6 +34,12 @@ export function loadStore(): void {
       const data = JSON.parse(raw) as LunchStore;
       if (data && typeof data.days === "object") {
         Object.assign(store.days, data.days);
+      }
+      if (data && typeof data.votes === "object") {
+        Object.assign(store.votes, data.votes);
+      }
+      if (data && typeof data.userNames === "object") {
+        Object.assign(store.userNames, data.userNames);
       }
     }
   } catch {
@@ -95,5 +105,70 @@ export function setDeadline(deadline: string): void {
   if (!day) return;
 
   day.deadline = deadline;
+  saveStore();
+}
+
+// --- Voting ---
+
+function voteKey(place: string): string {
+  return `${todayKey()}:${place}`;
+}
+
+export function getVotes(place: string): Set<string> {
+  const key = voteKey(place);
+  const voters = store.votes[key];
+  if (!voters) return new Set();
+  return new Set(voters);
+}
+
+export function toggleVote(place: string, userId: string): boolean {
+  const key = voteKey(place);
+  if (!store.votes[key]) {
+    store.votes[key] = [];
+  }
+  const voters = store.votes[key];
+  const index = voters.indexOf(userId);
+  if (index === -1) {
+    voters.push(userId);
+    saveStore();
+    return true; // voted
+  } else {
+    voters.splice(index, 1);
+    saveStore();
+    return false; // unvoted
+  }
+}
+
+export function hasVoted(place: string, userId: string): boolean {
+  const key = voteKey(place);
+  const voters = store.votes[key];
+  if (!voters) return false;
+  return voters.includes(userId);
+}
+
+export function getUserNames(): Map<string, string> {
+  return new Map(Object.entries(store.userNames));
+}
+
+export function setUserName(userId: string, name: string): void {
+  store.userNames[userId] = name;
+  saveStore();
+}
+
+export function setVotingStarted(votingStarted: boolean): void {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day) return;
+
+  day.votingStarted = votingStarted;
+  saveStore();
+}
+
+export function setPollMessageTs(ts: string): void {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day) return;
+
+  day.pollMessageTs = ts;
   saveStore();
 }

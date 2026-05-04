@@ -7,6 +7,8 @@ export const KNOWN_COMMANDS = new Set([
   "remove",
   "list",
   "help",
+  "vote",
+  "showpoll",
 ]);
 
 export interface CommandContext {
@@ -25,6 +27,8 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.remove = (await import("./commands/remove")).default;
   handlers.list = (await import("./commands/list")).default;
   handlers.help = (await import("./commands/help")).default;
+  handlers.vote = (await import("./commands/vote")).default;
+  handlers.showpoll = (await import("./commands/showpoll")).default;
 
   return handlers;
 }

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
 import { handleConfirmation, handleBlockAction } from "./commands/remove";
+import { handleVoteToggle } from "./commands/vote";
 import { loadStore } from "./store";
 import { registerSlashCommands } from "./slash";
 
@@ -24,6 +25,7 @@ const app = new App({
 app.event("app_mention", handleAppMention);
 app.message(/.*/, handleConfirmation as any);
 app.action(/confirm_/, handleBlockAction as any);
+app.action("vote_toggle", handleVoteToggle as any);
 
 registerSlashCommands(app);
 

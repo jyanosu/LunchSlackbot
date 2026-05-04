@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -107,5 +107,99 @@ describe("store", () => {
     expect(fs.existsSync(DATA_FILE)).toBe(true);
     const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
     expect(saved.days[today].suggestions).toContain("Taco Bell");
+  });
+});
+
+describe("store voting", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
+  afterEach(cleanup);
+
+  it("toggleVote adds vote on first call", async () => {
+    const { loadStore, setToday, toggleVote, getVotes } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    expect(toggleVote("Taco Bell", "U1")).toBe(true);
+    expect(getVotes("Taco Bell")).toContain("U1");
+  });
+
+  it("toggleVote removes vote on second call", async () => {
+    const { loadStore, setToday, toggleVote, getVotes } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    toggleVote("Taco Bell", "U1");
+    expect(toggleVote("Taco Bell", "U1")).toBe(false);
+    expect(getVotes("Taco Bell")).not.toContain("U1");
+  });
+
+  it("hasVoted returns correct state", async () => {
+    const { loadStore, setToday, toggleVote, hasVoted } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    expect(hasVoted("Taco Bell", "U1")).toBe(false);
+    toggleVote("Taco Bell", "U1");
+    expect(hasVoted("Taco Bell", "U1")).toBe(true);
+  });
+
+  it("getVotes returns empty set for unknown place", async () => {
+    const { loadStore, getVotes } = await import("./store");
+    loadStore();
+    expect(getVotes("Unknown")).toEqual(new Set());
+  });
+
+  it("multiple users can vote for same place", async () => {
+    const { loadStore, setToday, toggleVote, getVotes } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    toggleVote("Taco Bell", "U1");
+    toggleVote("Taco Bell", "U2");
+    const votes = getVotes("Taco Bell");
+    expect(votes).toContain("U1");
+    expect(votes).toContain("U2");
+  });
+
+  it("setUserName caches user name", async () => {
+    const { loadStore, setUserName, getUserNames } = await import("./store");
+    loadStore();
+    setUserName("U1", "Alice");
+    expect(getUserNames().get("U1")).toBe("Alice");
+  });
+
+  it("setVotingStarted updates voting state", async () => {
+    const { loadStore, setToday, setVotingStarted, getToday } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true, votingStarted: false });
+    setVotingStarted(true);
+    expect(getToday()?.votingStarted).toBe(true);
+  });
+
+  it("setPollMessageTs saves ts", async () => {
+    const { loadStore, setToday, setPollMessageTs, getToday } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true, votingStarted: true });
+    setPollMessageTs("1234567890.123456");
+    expect(getToday()?.pollMessageTs).toBe("1234567890.123456");
+  });
+
+  it("votes persist to file and reload", async () => {
+    const { loadStore, setToday, toggleVote, getVotes } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    toggleVote("Taco Bell", "U1");
+
+    // Read saved data directly
+    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    expect(saved.votes).toBeDefined();
+    const voteKey = today + ":Taco Bell";
+    expect(saved.votes[voteKey]).toContain("U1");
   });
 });
