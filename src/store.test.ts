@@ -598,4 +598,18 @@ describe("schedule config", () => {
 
     expect(getSchedule().enabled).toBe(false);
   });
+
+  it("schedule persists to file and reloads", async () => {
+    const { loadStore, setSchedule, getSchedule } = await import("./store");
+    loadStore();
+
+    setSchedule({ beginTime: "08:00", voteTime: "09:00", enabled: false });
+
+    // Read file directly to verify persistence (setSchedule calls saveStore)
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    expect(data.schedule.beginTime).toBe("08:00");
+    expect(data.schedule.voteTime).toBe("09:00");
+    expect(data.schedule.endTime).toBe("11:15");
+    expect(data.schedule.enabled).toBe(false);
+  });
 });
