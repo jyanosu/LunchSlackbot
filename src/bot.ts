@@ -20,6 +20,11 @@ const app = new App({
   signingSecret: SLACK_SIGNING_SECRET,
 });
 
+// Debug: log all incoming Slack events
+app.use(async ({ body }) => {
+  console.log("[DEBUG] Incoming Slack event:", JSON.stringify(body.type, null, 2));
+});
+
 app.event("app_mention", handleAppMention);
 app.message(/.*/, handleConfirmation as any);
 
