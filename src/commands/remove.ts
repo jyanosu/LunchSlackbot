@@ -151,9 +151,9 @@ export async function handleBlockAction({
   body: {
     user?: { id?: string };
     channel?: { id?: string };
+    message?: { ts?: string };
     actions?: Array<{
       action_id: string;
-      message?: { ts?: string };
     }>;
   };
   client: any;
@@ -163,7 +163,7 @@ export async function handleBlockAction({
   const userId = body.user?.id;
   const channelId = body.channel?.id;
   const actionId = body.actions?.[0]?.action_id;
-  const messageTs = body.actions?.[0]?.message?.ts;
+  const messageTs = body.message?.ts;
 
   console.log("[block_action] received", {
     actionId,
