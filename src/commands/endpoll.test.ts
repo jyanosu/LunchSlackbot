@@ -147,8 +147,8 @@ describe("handleEndpoll", () => {
     expect(announcement).toContain("Taco Bell — 1 vote");
     expect(announcement).toContain("Panda Express — 0 votes");
     // One of the tied places has the trophy
-    const chipotleLine = announcement.split("\n").find((l) => l.includes("Chipotle"));
-    const tacoLine = announcement.split("\n").find((l) => l.includes("Taco Bell"));
+    const chipotleLine = announcement.split("\n").find((l: string) => l.includes("Chipotle"));
+    const tacoLine = announcement.split("\n").find((l: string) => l.includes("Taco Bell"));
     const trophyCount = (chipotleLine?.includes("🏆") ? 1 : 0) + (tacoLine?.includes("🏆") ? 1 : 0);
     expect(trophyCount).toBe(1);
   });
