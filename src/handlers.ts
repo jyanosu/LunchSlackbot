@@ -15,6 +15,7 @@ export async function handleAppMention({
   say: (text: string) => Promise<unknown>;
   event?: { text?: string; user?: string; channel?: string };
 }) {
+  console.log("[app_mention] received", { text: event?.text, user: event?.user });
   const text = event?.text ?? "";
   const { command, args } = parseCommand(text);
 
