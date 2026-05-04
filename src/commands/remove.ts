@@ -222,5 +222,21 @@ export async function handleBlockAction({
     }
   }
 
+  // Handle adminreset confirmation
+  if (actionId === "confirm_adminreset") {
+    const resetEntry = check(userId, channelId, "adminreset");
+    if (resetEntry) {
+      console.log("[block_action] adminreset confirmed");
+      const { resetStore } = await import("../store");
+      resetStore();
+      await client.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: "🗑️ LunchBot has been reset. Master list preserved.",
+      });
+      return;
+    }
+  }
+
   console.log("[block_action] no pending confirmation for this user/channel");
 }

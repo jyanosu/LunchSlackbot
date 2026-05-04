@@ -644,3 +644,202 @@ P4-1 (store) → P4-2 (vote command) → P4-3 (vote toggle)
 ```
 
 Sequential — each task depends on the previous.
+
+---
+
+# Phase 5 Plan — Master Suggestion List
+
+Shared decisions (from spec): `masterList: Set<string>` on `LunchStore`, case-insensitive uniqueness, in-memory + JSON backup, `suggest` auto-adds to master list, remove affects master list only (not today's suggestions).
+
+## Task P5-1: Extend store with masterList
+
+**Goal:** Add `masterList` to `LunchStore` with add/check/get functions.
+
+**Context:**
+- `store.ts` has `LunchStore` with `days`, `votes`, `userNames`
+- `loadStore` handles JSON seeding
+- Sets are converted to arrays for JSON persistence
+
+**Proposed Approach:**
+- Add `masterList: Set<string>` to `LunchStore`
+- In `loadStore`, safely merge `masterList` from JSON (array → Set)
+- In `saveStore`, convert `masterList` Set → array for JSON
+- Add functions: `addToMasterList(place)`, `getMasterList()`, `removeFromMasterList(place)`
+- All operations normalize to lowercase for case-insensitive uniqueness
+
+**Acceptance Criteria:**
+- `addToMasterList` adds place (lowercased) if not already present
+- `getMasterList` returns the Set
+- `removeFromMasterList` removes place (case-insensitive)
+- Persistence: Set → array on save, array → Set on load
+- Existing store data without `masterList` loads with empty Set
+
+**Spec:** `none` (defined in spec.md Phase 5)
+
+**Verify:** `npm run build && npm test`
+
+**Out of Scope:**
+- Master list display or commands
+
+## Task P5-2: Integrate masterList with suggest command
+
+**Goal:** When `suggest` adds a place to today's suggestions, also add it to the master list.
+
+**Context:**
+- `commands/suggest.ts` adds places to today's suggestions
+- Store now has `addToMasterList` from P5-1
+
+**Proposed Approach:**
+- In `handleSuggest`, after adding to today's suggestions, call `addToMasterList(place)`
+- No change to reply message (master list add is silent)
+
+**Acceptance Criteria:**
+- Suggesting a new place adds it to both today's suggestions and master list
+- Suggesting a place already in master list is a no-op for master list
+- Existing suggest behavior unchanged (duplicate check for today, reply format)
+
+**Spec:** `none` (defined in spec.md Phase 5)
+
+**Verify:** `npm run build && npm test`
+
+## Task P5-3: Create showmasterlist and removefrommasterlist commands
+
+**Goal:** Commands to view and manage the master list.
+
+**Context:**
+- `commands/` has one file per command
+- `handlers.ts` routes commands via `routeCommand`
+- `slash.ts` registers slash commands
+
+**Proposed Approach:**
+- Create `commands/showmasterlist.ts` — numbered list or empty prompt
+- Create `commands/removefrommasterlist.ts` — remove with validation
+- Add both to `KNOWN_COMMANDS` + `routeCommand` in `handlers.ts`
+- Add `/lsb-showmasterlist`, `/lsb-removefrommasterlist` in `slash.ts`
+- Update `help.ts` to include new commands
+- Update `slash-commands-manifest.json`
+- Update `README.md` + `docs/lunchbot/README.md` commands table
+
+**Acceptance Criteria:**
+- `showmasterlist` shows numbered list with count, or empty prompt
+- `removefrommasterlist <place>` removes and confirms, or rejects unknown
+- `removefrommasterlist` with no place → usage hint
+- Slash commands route correctly
+- Help output includes new commands
+
+**Spec:** `none` (defined in spec.md Phase 5)
+
+**Verify:** `npm run build && npm test`
+
+## Dependency Graph
+
+```
+P5-1 (store masterList)
+  ↓
+P5-2 (suggest integration)
+  ↓
+P5-3 (showmasterlist + removefrommasterlist commands)
+```
+
+Sequential — each task depends on the previous.
+
+---
+
+# Phase 6 Plan — Admin Reset
+
+Shared decisions (from spec): `adminreset` clears days/votes/userNames but **preserves masterList**, requires button confirmation (`action_id: confirm_adminreset`), not listed in help, no slash command equivalent.
+
+## Task P6-1: Add resetStore to store and create adminreset command
+
+**Goal:** Add `resetStore()` to clear daily state and create the `adminreset` command with button confirmation.
+
+**Context:**
+- `store.ts` has `LunchStore` with `days`, `votes`, `userNames`, `masterList`
+- Store persists to `data/lunch.json` via `saveStore()`
+- `confirmations.ts` manages pending confirmations keyed by `${userId}:${channelId}:${action}`
+- `commands/remove.ts` has the confirmation button pattern to follow
+- `handlers.ts` routes commands via `routeCommand`
+
+**Proposed Approach:**
+- Add `resetStore()` to `store.ts` — clears `days`, `votes`, `userNames` to empty state, **preserves `masterList`**, saves to JSON
+- Create `commands/adminreset.ts` — sends confirmation button, handles `confirm_adminreset` block_action
+- Add `adminreset` to `KNOWN_COMMANDS` + `routeCommand` in `handlers.ts`
+- Register `app.action('confirm_adminreset', ...)` in `bot.ts`
+- Do **not** add to `help.ts` or `slash.ts`
+
+**Acceptance Criteria:**
+- `resetStore` clears days, votes, userNames to empty state
+- `resetStore` preserves masterList
+- `resetStore` saves state to JSON
+- `adminreset` handler sends confirmation button
+- Confirmation button click executes reset and replies
+- Command is routable via `@LunchSlackBot adminreset`
+- Help output does not include `adminreset`
+
+**Spec:** `none` (defined in spec.md Phase 6)
+
+**Verify:** `npm run build && npm test`
+
+**Out of Scope:**
+- Admin authentication or role checks
+- Partial resets
+- Slash command equivalent
+
+## Dependency Graph
+
+```
+P6-1 (resetStore + adminreset command)
+```
+
+Single task — self-contained.
+
+---
+
+# Phase 7 Plan — Suggest From Master List
+
+Shared decisions (from spec): `suggestfrommasterlist` randomly picks places from master list and adds to today's suggestions. Accepts optional count argument (default 5). Never fails — reports what was added.
+
+## Task P7-1: Create suggestfrommasterlist command with optional count
+
+**Goal:** Create command that randomly picks N places from master list and adds them to today's suggestions.
+
+**Context:**
+- `store.ts` has `getMasterList()`, `addSuggestion()`, `getToday()`
+- `commands/` has one file per command
+- `handlers.ts` routes commands via `routeCommand`
+- `args` parameter carries everything after command name (e.g., `suggestfrommasterlist 3` → args: `"3"`)
+
+**Proposed Approach:**
+- Create `commands/suggestfrommasterlist.ts`
+- Parse optional count from `args` (default 5, clamp to valid range)
+- Shuffle master list, pick N places
+- Add each to today's suggestions via `addSuggestion()` (skips duplicates silently)
+- Report: X added, Y skipped (already suggested)
+- If count exceeds available places, add all available and report actual count
+- Add `suggestfrommasterlist` to `KNOWN_COMMANDS` + `routeCommand` in `handlers.ts`
+
+**Acceptance Criteria:**
+- `suggestfrommasterlist` with no args → picks 5 places
+- `suggestfrommasterlist 3` → picks 3 places
+- `suggestfrommasterlist 10` with only 7 available → picks 7, reports 7 added
+- Skips places already in today's suggestions, reports count skipped
+- Empty master list → prompts to seed or suggest
+- Round not started → prompts to begin
+- Never fails — always reports what was added
+
+**Spec:** `none` (defined inline)
+
+**Verify:** `npm run build && npm test`
+
+**Out of Scope:**
+- Slash command equivalent
+- Weighted/random preference logic
+- Categorization filtering
+
+## Dependency Graph
+
+```
+P7-1 (suggestfrommasterlist command)
+```
+
+Single task — self-contained.

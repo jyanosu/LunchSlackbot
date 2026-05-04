@@ -9,6 +9,11 @@ export const KNOWN_COMMANDS = new Set([
   "help",
   "vote",
   "showpoll",
+  "showmasterlist",
+  "removefrommasterlist",
+  "adminreset",
+  "seedmasterlist",
+  "suggestfrommasterlist",
 ]);
 
 export interface CommandContext {
@@ -29,6 +34,11 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.help = (await import("./commands/help")).default;
   handlers.vote = (await import("./commands/vote")).default;
   handlers.showpoll = (await import("./commands/showpoll")).default;
+  handlers.showmasterlist = (await import("./commands/showmasterlist")).default;
+  handlers.removefrommasterlist = (await import("./commands/removefrommasterlist")).default;
+  handlers.adminreset = (await import("./commands/adminreset")).default;
+  handlers.seedmasterlist = (await import("./commands/seedmasterlist")).default;
+  handlers.suggestfrommasterlist = (await import("./commands/suggestfrommasterlist")).default;
 
   return handlers;
 }

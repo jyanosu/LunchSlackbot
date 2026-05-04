@@ -1,4 +1,4 @@
-import { getToday, addSuggestion } from "../store";
+import { getToday, addSuggestion, addToMasterList } from "../store";
 
 export default async function handleSuggest({
   say,
@@ -31,6 +31,8 @@ export default async function handleSuggest({
     await say(`*${place}* is already suggested.`);
     return;
   }
+
+  addToMasterList(place);
 
   const updated = getToday();
   const list = updated?.suggestions.map((s) => `• ${s}`).join("\n") ?? "";

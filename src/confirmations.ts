@@ -1,5 +1,5 @@
 export interface PendingConfirmation {
-  type: "begin" | "remove";
+  type: "begin" | "remove" | "adminreset";
   payload: unknown;
   timeout: ReturnType<typeof setTimeout>;
 }
@@ -15,7 +15,7 @@ function key(userId: string, channelId: string, action: string): string {
 export function add(
   userId: string,
   channelId: string,
-  action: "begin" | "remove",
+  action: "begin" | "remove" | "adminreset",
   payload: unknown
 ): void {
   const k = key(userId, channelId, action);
@@ -35,7 +35,7 @@ export function add(
 export function check(
   userId: string,
   channelId: string,
-  action: "begin" | "remove"
+  action: "begin" | "remove" | "adminreset"
 ): PendingConfirmation | undefined {
   const k = key(userId, channelId, action);
   const entry = pendingConfirmations.get(k);

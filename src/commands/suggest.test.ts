@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let mockGetToday: ReturnType<typeof vi.fn>;
 let mockAddSuggestion: ReturnType<typeof vi.fn>;
+let mockAddToMasterList: ReturnType<typeof vi.fn>;
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
   addSuggestion: vi.fn(),
+  addToMasterList: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -14,6 +16,7 @@ import handleSuggest from "./suggest";
 beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
   mockAddSuggestion = store.addSuggestion as ReturnType<typeof vi.fn>;
+  mockAddToMasterList = store.addToMasterList as ReturnType<typeof vi.fn>;
   vi.clearAllMocks();
 });
 
@@ -76,5 +79,35 @@ describe("suggest command", () => {
     await handleSuggest({ say });
 
     expect(say).toHaveBeenCalledWith("Usage: @LunchSlackBot suggest <place>");
+  });
+
+  it("adds place to master list after successful suggest", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Chipotle"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    mockAddSuggestion.mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(mockAddToMasterList).toHaveBeenCalledWith("Chipotle");
+  });
+
+  it("does not add to master list when duplicate", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    mockAddSuggestion.mockReturnValue(false);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Taco Bell" });
+
+    expect(mockAddToMasterList).not.toHaveBeenCalled();
   });
 });

@@ -17,9 +17,10 @@ export interface LunchStore {
   days: Record<string, LunchDay>;
   votes: Record<string, string[]>;  // "date:place" → userId[]
   userNames: Record<string, string>;  // userId → name
+  masterList: string[];  // lowercase place names, unique (array for JSON)
 }
 
-const store: LunchStore = { days: {}, votes: {}, userNames: {} };
+const store: LunchStore = { days: {}, votes: {}, userNames: {}, masterList: [] };
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -40,6 +41,9 @@ export function loadStore(): void {
       }
       if (data && typeof data.userNames === "object") {
         Object.assign(store.userNames, data.userNames);
+      }
+      if (data && Array.isArray(data.masterList)) {
+        store.masterList = data.masterList;
       }
     }
   } catch {
@@ -170,5 +174,38 @@ export function setPollMessageTs(ts: string): void {
   if (!day) return;
 
   day.pollMessageTs = ts;
+  saveStore();
+}
+
+// --- Master List ---
+
+export function getMasterList(): Set<string> {
+  return new Set(store.masterList);
+}
+
+export function addToMasterList(place: string): void {
+  const normalized = place.toLowerCase();
+  if (!store.masterList.includes(normalized)) {
+    store.masterList.push(normalized);
+    saveStore();
+  }
+}
+
+export function removeFromMasterList(place: string): boolean {
+  const normalized = place.toLowerCase();
+  const index = store.masterList.indexOf(normalized);
+  if (index === -1) return false;
+  store.masterList.splice(index, 1);
+  saveStore();
+  return true;
+}
+
+// --- Admin Reset ---
+
+export function resetStore(): void {
+  store.days = {};
+  store.votes = {};
+  store.userNames = {};
+  // masterList is preserved
   saveStore();
 }

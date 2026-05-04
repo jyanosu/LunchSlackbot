@@ -203,3 +203,114 @@ describe("store voting", () => {
     expect(saved.votes[voteKey]).toContain("U1");
   });
 });
+
+describe("store masterList", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
+  afterEach(cleanup);
+
+  it("addToMasterList adds a new place", async () => {
+    const { loadStore, addToMasterList, getMasterList } = await import("./store");
+    loadStore();
+    addToMasterList("Taco Bell");
+    expect(getMasterList()).toContain("taco bell");
+  });
+
+  it("addToMasterList is idempotent", async () => {
+    const { loadStore, addToMasterList, getMasterList } = await import("./store");
+    loadStore();
+    addToMasterList("Taco Bell");
+    addToMasterList("TACO BELL");
+    expect(getMasterList().size).toBe(1);
+  });
+
+  it("removeFromMasterList removes a place", async () => {
+    const { loadStore, addToMasterList, removeFromMasterList, getMasterList } = await import("./store");
+    loadStore();
+    addToMasterList("Chipotle");
+    expect(getMasterList()).toContain("chipotle");
+    removeFromMasterList("CHIPOTLE");
+    expect(getMasterList()).not.toContain("chipotle");
+  });
+
+  it("removeFromMasterList returns false for unknown place", async () => {
+    const { loadStore, removeFromMasterList } = await import("./store");
+    loadStore();
+    expect(removeFromMasterList("Nonexistent")).toBe(false);
+  });
+
+  it("masterList persists to file and reloads", async () => {
+    const { loadStore, addToMasterList, getMasterList } = await import("./store");
+    loadStore();
+    addToMasterList("In-N-Out");
+
+    // Read saved data directly
+    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    expect(saved.masterList).toContain("in-n-out");
+
+    // Reload and verify
+    const { loadStore: loadStore2, getMasterList: getMasterList2 } = await import("./store");
+    vi.resetModules();
+    const reloaded = await import("./store");
+    reloaded.loadStore();
+    expect(reloaded.getMasterList()).toContain("in-n-out");
+  });
+
+  it("empty masterList loads gracefully", async () => {
+    const { loadStore, getMasterList } = await import("./store");
+    loadStore();
+    expect(getMasterList().size).toBe(0);
+  });
+});
+
+describe("store adminreset", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
+  afterEach(cleanup);
+
+  it("resetStore clears days, votes, userNames", async () => {
+    const { loadStore, setToday, toggleVote, setUserName, resetStore, getToday, getVotes, getUserNames } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    toggleVote("Taco Bell", "U1");
+    setUserName("U1", "Alice");
+
+    resetStore();
+
+    expect(getToday()).toBeUndefined();
+    expect(getVotes("Taco Bell").size).toBe(0);
+    expect(getUserNames().size).toBe(0);
+  });
+
+  it("resetStore preserves masterList", async () => {
+    const { loadStore, addToMasterList, resetStore, getMasterList } = await import("./store");
+    loadStore();
+    addToMasterList("Taco Bell");
+    addToMasterList("Chipotle");
+
+    resetStore();
+
+    expect(getMasterList()).toContain("taco bell");
+    expect(getMasterList()).toContain("chipotle");
+    expect(getMasterList().size).toBe(2);
+  });
+
+  it("resetStore saves empty state to JSON", async () => {
+    const { loadStore, setToday, resetStore } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+
+    resetStore();
+
+    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    expect(Object.keys(saved.days)).toHaveLength(0);
+    expect(Object.keys(saved.votes)).toHaveLength(0);
+    expect(Object.keys(saved.userNames)).toHaveLength(0);
+  });
+});

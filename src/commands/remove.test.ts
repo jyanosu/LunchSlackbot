@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 let mockGetToday: ReturnType<typeof vi.fn>;
 let mockRemoveSuggestion: ReturnType<typeof vi.fn>;
 let mockSetToday: ReturnType<typeof vi.fn>;
+let mockResetStore: ReturnType<typeof vi.fn>;
 let mockAdd: ReturnType<typeof vi.fn>;
 let mockCheck: ReturnType<typeof vi.fn>;
 
@@ -10,6 +11,7 @@ vi.mock("../store", () => ({
   getToday: vi.fn(),
   removeSuggestion: vi.fn(),
   setToday: vi.fn(),
+  resetStore: vi.fn(),
 }));
 
 vi.mock("../confirmations", () => ({
@@ -25,6 +27,7 @@ beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
   mockRemoveSuggestion = store.removeSuggestion as ReturnType<typeof vi.fn>;
   mockSetToday = store.setToday as ReturnType<typeof vi.fn>;
+  mockResetStore = store.resetStore as ReturnType<typeof vi.fn>;
   mockAdd = confirmations.add as ReturnType<typeof vi.fn>;
   mockCheck = confirmations.check as ReturnType<typeof vi.fn>;
   vi.clearAllMocks();
@@ -242,5 +245,27 @@ describe("handleBlockAction", () => {
     });
 
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("resets store on confirm_adminreset button click", async () => {
+    mockCheck.mockReturnValue({ type: "adminreset", payload: null });
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_adminreset" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockResetStore).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "🗑️ LunchBot has been reset. Master list preserved.",
+    });
   });
 });
