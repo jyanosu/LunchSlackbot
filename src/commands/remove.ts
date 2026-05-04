@@ -39,9 +39,23 @@ export default async function handleRemove({
   }
 
   add(userId, channelId, "remove", place);
-  await say(
-    `Remove *${place}* from today's suggestions? Reply with "yes" to confirm.`
-  );
+  await (say as any)({
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Remove *${place}* from today's suggestions?`,
+        },
+        accessory: {
+          type: "button",
+          text: { type: "plain_text", text: "Yes", emoji: false },
+          action_id: "confirm_remove",
+          style: "danger",
+        },
+      },
+    ],
+  });
 }
 
 /**
@@ -122,4 +136,91 @@ export async function handleConfirmation({
   }
 
   console.log("[confirmation] no pending confirmation for this user/channel");
+}
+
+/**
+ * Button-based confirmation handler (block_actions).
+ * More reliable than message events.
+ */
+export async function handleBlockAction({
+  ack,
+  body,
+  client,
+}: {
+  ack: () => Promise<void>;
+  body: {
+    user?: { id?: string };
+    channel?: { id?: string };
+    actions?: Array<{
+      action_id: string;
+      message?: { ts?: string };
+    }>;
+  };
+  client: any;
+}) {
+  await ack();
+
+  const userId = body.user?.id;
+  const channelId = body.channel?.id;
+  const actionId = body.actions?.[0]?.action_id;
+  const messageTs = body.actions?.[0]?.message?.ts;
+
+  console.log("[block_action] received", {
+    actionId,
+    userId,
+    channelId,
+  });
+
+  if (!userId || !channelId || !actionId) {
+    console.log("[block_action] missing required fields");
+    return;
+  }
+
+  // Handle begin confirmation
+  if (actionId === "confirm_begin") {
+    const beginEntry = check(userId, channelId, "begin");
+    if (beginEntry) {
+      console.log("[block_action] begin confirmed");
+      const today = new Date().toISOString().split("T")[0];
+      const { setToday } = await import("../store");
+      setToday({
+        date: today,
+        suggestions: [],
+        deadline: "11:00 AM",
+        started: true,
+      });
+      await client.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+      });
+      return;
+    }
+  }
+
+  // Handle remove confirmation
+  if (actionId === "confirm_remove") {
+    const removeEntry = check(userId, channelId, "remove");
+    if (removeEntry) {
+      console.log("[block_action] remove confirmed");
+      const place = removeEntry.payload as string;
+      const removed = removeSuggestion(place);
+      if (removed) {
+        await client.chat.update({
+          channel: channelId,
+          ts: messageTs,
+          text: `✅ Removed *${place}* from today's suggestions.`,
+        });
+      } else {
+        await client.chat.update({
+          channel: channelId,
+          ts: messageTs,
+          text: `Sorry, *${place}* was not found in today's suggestions.`,
+        });
+      }
+      return;
+    }
+  }
+
+  console.log("[block_action] no pending confirmation for this user/channel");
 }

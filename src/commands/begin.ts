@@ -26,5 +26,21 @@ export default async function handleBegin({
   }
 
   add(userId, channelId, "begin", null);
-  await say('Start lunch suggestions for today? Reply with "yes" to confirm.');
+  await (say as any)({
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "Start lunch suggestions for today?",
+        },
+        accessory: {
+          type: "button",
+          text: { type: "plain_text", text: "Yes", emoji: false },
+          action_id: "confirm_begin",
+          style: "primary",
+        },
+      },
+    ],
+  });
 }
