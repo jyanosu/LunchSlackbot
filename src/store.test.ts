@@ -211,11 +211,11 @@ describe("store masterList", () => {
   });
   afterEach(cleanup);
 
-  it("addToMasterList adds a new place", async () => {
+  it("addToMasterList adds a new place (preserves original case)", async () => {
     const { loadStore, addToMasterList, getMasterList } = await import("./store");
     loadStore();
     addToMasterList("Taco Bell");
-    expect(getMasterList()).toContain("taco bell");
+    expect(getMasterList()).toContain("Taco Bell");
   });
 
   it("addToMasterList is idempotent", async () => {
@@ -226,13 +226,13 @@ describe("store masterList", () => {
     expect(getMasterList().size).toBe(1);
   });
 
-  it("removeFromMasterList removes a place", async () => {
+  it("removeFromMasterList removes a place (case-insensitive)", async () => {
     const { loadStore, addToMasterList, removeFromMasterList, getMasterList } = await import("./store");
     loadStore();
     addToMasterList("Chipotle");
-    expect(getMasterList()).toContain("chipotle");
+    expect(getMasterList()).toContain("Chipotle");
     removeFromMasterList("CHIPOTLE");
-    expect(getMasterList()).not.toContain("chipotle");
+    expect(getMasterList()).not.toContain("Chipotle");
   });
 
   it("removeFromMasterList returns false for unknown place", async () => {
@@ -241,21 +241,21 @@ describe("store masterList", () => {
     expect(removeFromMasterList("Nonexistent")).toBe(false);
   });
 
-  it("masterList persists to file and reloads", async () => {
+  it("masterList persists to file and reloads (preserves case)", async () => {
     const { loadStore, addToMasterList, getMasterList } = await import("./store");
     loadStore();
     addToMasterList("In-N-Out");
 
     // Read saved data directly
     const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-    expect(saved.masterList).toContain("in-n-out");
+    expect(saved.masterList).toContain("In-N-Out");
 
     // Reload and verify
     const { loadStore: loadStore2, getMasterList: getMasterList2 } = await import("./store");
     vi.resetModules();
     const reloaded = await import("./store");
     reloaded.loadStore();
-    expect(reloaded.getMasterList()).toContain("in-n-out");
+    expect(reloaded.getMasterList()).toContain("In-N-Out");
   });
 
   it("empty masterList loads gracefully", async () => {
@@ -287,7 +287,7 @@ describe("store adminreset", () => {
     expect(getUserNames().size).toBe(0);
   });
 
-  it("resetStore preserves masterList", async () => {
+  it("resetStore preserves masterList (original case)", async () => {
     const { loadStore, addToMasterList, resetStore, getMasterList } = await import("./store");
     loadStore();
     addToMasterList("Taco Bell");
@@ -295,8 +295,8 @@ describe("store adminreset", () => {
 
     resetStore();
 
-    expect(getMasterList()).toContain("taco bell");
-    expect(getMasterList()).toContain("chipotle");
+    expect(getMasterList()).toContain("Taco Bell");
+    expect(getMasterList()).toContain("Chipotle");
     expect(getMasterList().size).toBe(2);
   });
 
