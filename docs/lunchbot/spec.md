@@ -12,3 +12,4 @@ Phase specs are in separate files:
 | Phase 7 — Suggest From Master List | [spec-phase7.md](./spec-phase7.md) | [plan-phase7.md](./plan-phase7.md) |
 | Phase 8 — Channel Announcements | [spec-phase8.md](./spec-phase8.md) | [plan-phase8.md](./plan-phase8.md) |
 | Phase 9 — End Poll, Winner Announcement & History | [spec-phase9.md](./spec-phase9.md) | [plan-phase9.md](./plan-phase9.md) |
+| Phase 10 — Automated Scheduling | [spec-phase10.md](./spec-phase10.md) | [plan-phase10.md](./plan-phase10.md) |

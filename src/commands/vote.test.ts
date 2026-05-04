@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
-  setVotingStarted: vi.fn(),
+  startVoting: vi.fn(),
   setPollMessageTs: vi.fn(),
   getVotes: vi.fn(),
   hasVoted: vi.fn(),
@@ -61,12 +61,15 @@ describe("handleVote", () => {
   });
 
   it("starts voting and posts poll message", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+    const todayDay = {
       started: true,
       votingStarted: false,
       suggestions: ["Taco Bell", "Chipotle"],
       deadline: "11:45 AM",
-    });
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
@@ -76,7 +79,7 @@ describe("handleVote", () => {
       channelId: "C1",
     });
 
-    expect(store.setVotingStarted).toHaveBeenCalledWith(true);
+    expect(store.startVoting).toHaveBeenCalled();
     expect(say).toHaveBeenCalledWith(
       expect.objectContaining({
         text: expect.stringContaining("Voting is open"),
@@ -101,12 +104,15 @@ describe("handleVote", () => {
   });
 
   it("saves poll message ts when returned", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+    const todayDay = {
       started: true,
       votingStarted: false,
       suggestions: ["Taco Bell"],
       deadline: "11:45 AM",
-    });
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     const say = vi.fn().mockResolvedValue({ ts: "9999999.111" });
 
@@ -116,12 +122,15 @@ describe("handleVote", () => {
   });
 
   it("posts announcement before poll message", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+    const todayDay = {
       started: true,
       votingStarted: false,
       suggestions: ["Taco Bell", "Chipotle"],
       deadline: "11:45 AM",
-    });
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 

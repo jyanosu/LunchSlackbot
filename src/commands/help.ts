@@ -22,6 +22,12 @@ export default async function handleHelp({
       "suggestfrommasterlist [count] (/lsb-suggestfrommasterlist) - suggest random places from master list (default 5)",
       "endpoll (/lsb-endpoll) - end voting and announce the winner",
       "history (/lsb-showhistory) - show past lunch winners",
+      "schedule (/lsb-schedule) - show current schedule",
+      "schedule enable (/lsb-schedule) - enable automatic schedule",
+      "schedule disable (/lsb-schedule) - disable automatic schedule",
+      "schedulebegin <time> (/lsb-schedulebegin) - set automatic begin time",
+      "schedulevote <time> (/lsb-schedulevote) - set automatic vote time",
+      "scheduleend <time> (/lsb-scheduleend) - set automatic end time",
       "help (/lsb-help) - show this message",
     ].join("\n")
   );
