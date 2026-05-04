@@ -51,10 +51,13 @@ export default async function handleRemove({
 export async function handleConfirmation({
   event,
   say,
+  ack,
 }: {
   event: { user?: string; channel?: string; text?: string; bot?: boolean };
   say: (text: string) => Promise<unknown>;
+  ack?: () => Promise<void>;
 }) {
+  if (ack) await ack();
   console.log("[confirmation] message event received", {
     text: event.text,
     bot: event.bot,
