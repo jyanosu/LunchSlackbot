@@ -38,12 +38,15 @@ export default async function handleEndpoll({
   });
 
   // Pick winner: first in sorted list
-  const winner = results[0];
-  const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
-
-  // Check if there's a tie (multiple places with same vote count as winner)
-  const tiedWinners = results.filter((r) => r.votes === winner.votes);
+  const topVotes = results[0].votes;
+  const tiedWinners = results.filter((r) => r.votes === topVotes);
   const isTie = tiedWinners.length > 1;
+
+  // If tie, pick randomly; otherwise first place wins
+  const winner = isTie
+    ? tiedWinners[Math.floor(Math.random() * tiedWinners.length)]
+    : tiedWinners[0];
+  const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
 
   // Save winner to history
   addWinner({
@@ -57,7 +60,7 @@ export default async function handleEndpoll({
   setPollEnded();
 
   // Build final announcement
-  const tieNote = isTie ? " (tiebreaker: alphabetical)" : "";
+  const tieNote = isTie ? " (tiebreaker: random)" : "";
   let resultsText = "*Final results:**\n";
 
   let rank = 1;

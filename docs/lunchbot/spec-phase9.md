@@ -17,7 +17,7 @@ End the voting poll, announce the winner with final results, and persist winners
 ## Requirements
 
 1. **`endpoll` command** — Ends voting, computes winner, posts final results announcement.
-2. **Winner determination** — Highest vote count wins. Ties broken alphabetically by place name (ascending).
+2. **Winner determination** — Highest vote count wins. Ties broken by random selection.
 3. **Final announcement** — Posts to channel with results ordered by vote count (descending), ties by name (ascending). Shows winner prominently.
 4. **Winner history** — Persist `{ date, place, voteCount, totalVotes }` in `data/winners.json`.
 5. **`showhistory` command** — Display all past winners in reverse chronological order.
@@ -83,18 +83,18 @@ In `commands/endpoll.ts`:
 3. Panda Express — 2 votes
 ```
 
-For a tie (winner picked alphabetically):
+For a tie (winner picked randomly):
 
 ```
-🥳 *Lunch is decided!* (tiebreaker: alphabetical)
+🥳 *Lunch is decided!* (tiebreaker: random)
 
-🏆 *Chipotle* — 3 votes
+🏆 *Taco Bell* — 3 votes
 
 ---
 
 *Final results:*
-1. 🏆 Chipotle — 3 votes
-1. Taco Bell — 3 votes
+1. 🏆 Taco Bell — 3 votes
+1. Chipotle — 3 votes
 3. Panda Express — 1 vote
 ```
 
@@ -145,7 +145,7 @@ Add entries:
 | Decision | Choice | Rationale |
 |---|---|---|
 | Command name | `endpoll` | Clear, matches `vote`/`showpoll` naming |
-| Tiebreaker | Alphabetical (ascending) | Deterministic, simple, no randomness needed |
+| Tiebreaker | Random | Fair when multiple places are tied |
 | Winner history | Separate `winners.json` | Survives `adminreset` (preserved knowledge) |
 | History in help | `history` (not `showhistory`) | Shorter, more natural |
 | Poll ended flag | `pollEnded` on `LunchDay` | Prevents re-voting, re-ending |
@@ -157,7 +157,7 @@ Add entries:
 ## Invariants
 
 - Poll can only be ended once per day (`pollEnded` flag prevents re-execution).
-- Winner is always deterministic (alphabetical tiebreaker).
+- Winner is always the highest-voted place; ties broken randomly.
 - Winners list is append-only (never cleared by `adminreset`, no pruning).
 - Results are computed from actual vote data at time of `endpoll` (not cached).
 - All suggestions appear in final results, even with 0 votes.

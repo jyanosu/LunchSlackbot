@@ -327,6 +327,14 @@ describe("store adminreset", () => {
     expect(getToday()?.pollEnded).toBe(true);
   });
 
+  it("setPollEnded is no-op when no today", async () => {
+    const { loadStore, setPollEnded } = await import("./store");
+    loadStore();
+
+    // Should not throw
+    expect(() => setPollEnded()).not.toThrow();
+  });
+
   // --- Winner History ---
 
   const WINNERS_FILE = path.join(DATA_DIR, "winners.json");

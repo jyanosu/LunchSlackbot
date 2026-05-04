@@ -1,6 +1,6 @@
 # Phase 9 Plan — End Poll, Winner Announcement & History
 
-Shared decisions (from spec): `endpoll` command ends voting and announces winner, ties broken alphabetically ascending, winners persist in `data/winners.json` (append-only, survives `adminreset`), `pollEnded` flag on `LunchDay` freezes voting, `history` command shows past winners reverse-chronological.
+Shared decisions (from spec): `endpoll` command ends voting and announces winner, ties broken by random selection, winners persist in `data/winners.json` (append-only, survives `adminreset`), `pollEnded` flag on `LunchDay` freezes voting, `history` command shows past winners reverse-chronological.
 
 ---
 

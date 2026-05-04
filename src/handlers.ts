@@ -16,6 +16,7 @@ export const KNOWN_COMMANDS = new Set([
   "suggestfrommasterlist",
   "endpoll",
   "showhistory",
+  "history",
 ]);
 
 export interface CommandContext {
@@ -43,6 +44,7 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.suggestfrommasterlist = (await import("./commands/suggestfrommasterlist")).default;
   handlers.endpoll = (await import("./commands/endpoll")).default;
   handlers.showhistory = (await import("./commands/showhistory")).default;
+  handlers.history = handlers.showhistory; // alias
 
   return handlers;
 }
