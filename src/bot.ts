@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
-import { handleConfirmation } from "./commands/remove";
+import { handleConfirmation, handleBlockAction } from "./commands/remove";
 import { loadStore } from "./store";
 
 const { SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET } = process.env;
@@ -20,13 +20,9 @@ const app = new App({
   signingSecret: SLACK_SIGNING_SECRET,
 });
 
-// Debug: log all incoming Slack events
-app.use(async ({ body }) => {
-  console.log("[DEBUG] Incoming Slack event:", JSON.stringify(body.type, null, 2));
-});
-
 app.event("app_mention", handleAppMention);
 app.message(/.*/, handleConfirmation as any);
+app.action(/confirm_/, handleBlockAction as any);
 
 console.log("✅ Bot listeners registered: app_mention, message");
 
