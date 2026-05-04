@@ -184,6 +184,44 @@ npm test -- deadline
 
 ---
 
+## Task 6b — `list` command
+
+**Goal:** Show today's lunch suggestions as a numbered list with the deadline.
+
+**Context:** Store has `getToday`. Router routes `list` command. Users need a quick way to see current suggestions without scrolling.
+
+**Proposed Approach:**
+- Implement `src/commands/list.ts`:
+  - Check `begin` was called (today's `started` is true) → prompt to begin if not.
+  - If no suggestions → reply: `No suggestions yet. Use @LunchSlackBot suggest <place> to add one.`
+  - If suggestions exist → reply using a **mrkdwn block** (not plain text `\n`) so Slack renders line breaks correctly:
+    ```
+    🍱 *Today's lunch suggestions* (deadline: <deadline>):
+    1. <place1>
+    2. <place2>
+    ```
+  - Remove unused `userId` and `channelId` from handler signature — `list` doesn't need them.
+- Create `src/commands/list.test.ts` with three cases:
+  - `begin` not started → prompts to begin
+  - No suggestions → prompts to add one
+  - Suggestions exist → returns numbered list with deadline
+
+**Acceptance Criteria:**
+- Suggestions exist → numbered list rendered correctly in Slack (mrkdwn block, not escaped `\n`).
+- No suggestions yet → prompt to add one.
+- `begin` not called yet → prompt to run `begin` first.
+- Unit tests cover all three paths.
+- Handler signature only includes parameters that are actually used.
+
+**Spec:** full (`docs/lunchbot/spec.md` § Requirements #5).
+
+**Verify:**
+```
+npm test -- list
+```
+
+---
+
 ## Task 7 — `remove` command + confirmation listener
 
 **Goal:** Remove a suggestion after user confirms by replying "yes", and wire the shared `message_events` listener in `bot.ts`.
@@ -239,7 +277,7 @@ npm run build   # compiles with bot.ts + remove.ts
 - `npm run build` succeeds.
 - Render deploys without errors.
 - Slack app re-installed with `channels:history` scope.
-- All 5 commands work in live Slack.
+- All 6 commands work in live Slack (begin, suggest, suggestiondeadline, remove, list, help).
 
 **Spec:** none.
 
@@ -286,9 +324,9 @@ grep -A2 '"scripts"' package.json  # shows build + start
 ```
 Task 1 (store) → Task 2 (parser) → Task 3 (router)
                                         ↓
-              Tasks 4, 5, 6, 7 (parallel)
+              Tasks 4, 5, 6, 6b, 7 (parallel)
                                         ↓
                                Task 8 (tests + deploy)
 ```
 
-Tasks 1–3 are sequential. Tasks 4–7 run in parallel after Task 3. Task 8 is last.
+Tasks 1–3 are sequential. Tasks 4–7 (including 6b) run in parallel after Task 3. Task 8 is last.

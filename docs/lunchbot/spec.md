@@ -87,13 +87,15 @@ After Phase 1's bot skeleton, Phase 2 adds lunch suggestion collection, deadline
 2. **`@LunchSlackBot suggest <place>`** — Adds `<place>` to today's suggestion list. Replies confirming the addition and listing all current suggestions.
 3. **`@LunchSlackBot suggestiondeadline <time>`** — Sets or overrides the suggestion deadline for the day. Defaults to `11:00 AM EST`. Accepts a time string (e.g., `10:30 AM`, `11:30`).
 4. **`@LunchSlackBot remove <place>`** — Removes `<place>` from today's suggestions. Prompts the user with a confirmation reply before removing.
-5. **`@LunchSlackBot help`** — Lists all available commands with brief descriptions. Reply format:
+5. **`@LunchSlackBot list`** — Shows today's lunch suggestions as a numbered list with the deadline. If suggestions haven't started, prompts the user to run `begin`. If no suggestions exist yet, prompts the user to add one.
+6. **`@LunchSlackBot help`** — Lists all available commands with brief descriptions. Reply format:
    ```
    🍱 *LunchBot Commands:*
    begin - start the lunch poll for the day
    suggest <place> - add a lunch place to today's poll
    suggestiondeadline <time> - set the suggestion deadline (default 11:00 AM EST)
    remove <place> - remove a suggestion from today's poll
+   list - show today's lunch suggestions
    help - show this message
    ```
 6. **Persistence** — Suggestions survive bot restarts. Saved suggestions are available the next day if needed.
@@ -110,6 +112,7 @@ The `app_mention` handler extracts text after `@LunchSlackBot` and parses it cas
 | `@LunchSlackBot suggest Taco Bell` | Add "Taco Bell" |
 | `@LunchSlackBot suggestiondeadline 10:30 AM` | Set deadline |
 | `@LunchSlackBot remove Taco Bell` | Remove with confirmation prompt |
+| `@LunchSlackBot list` | Show today's suggestions |
 | `@LunchSlackBot help` | List all commands |
 | `@LunchSlackBot` (no subcommand) | Show title (Phase 1 behavior) |
 
@@ -179,6 +182,7 @@ src/
     suggest.ts        — add suggestion
     deadline.ts       — set/override deadline
     remove.ts         — remove with confirmation
+    list.ts           — list today's suggestions
     help.ts           — list commands
 ```
 
@@ -217,7 +221,8 @@ src/
 - Unit test: `begin` requires confirmation before starting; already-started round skips confirmation.
 - Unit test: remove handler requires confirmation before deleting.
 - Unit test: confirmation map keys are unique per action (begin vs. remove don't collide).
-- Manual: full flow in Slack — begin → suggest → deadline → remove → verify persistence after restart.
+- Unit test: `list` shows numbered suggestions with deadline, prompts to begin if not started, prompts to suggest if none exist.
+- Manual: full flow in Slack — begin → suggest → deadline → remove → list → verify persistence after restart.
 
 ## Out of Scope (Phase 2)
 
