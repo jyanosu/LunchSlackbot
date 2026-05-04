@@ -39,9 +39,9 @@ export default async function handleAdminQuickTest({
         return;
       }
 
-      // Set deadline to 6 min from now so reminder fires at 5 min
+      // Set deadline to 7 min from now so suggestion reminder fires at 6 min (5 min before deadline)
       const now = new Date();
-      now.setMinutes(now.getMinutes() + 6);
+      now.setMinutes(now.getMinutes() + 7);
       const deadline = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")} EST`;
       setDeadline(deadline);
 
@@ -98,6 +98,25 @@ export default async function handleAdminQuickTest({
       console.error("[adminquicktest] vote phase error:", err);
     }
   }, 420_000);
+
+  // Phase 2.5: Voting reminder (12 min — 5 min before end)
+  setTimeout(async () => {
+    try {
+      const today = getToday();
+      if (!today?.votingStarted || today.pollEnded) {
+        console.log("[adminquicktest] voting reminder skipped — phase changed");
+        return;
+      }
+
+      await client.chat.postMessage({
+        channel: channelId,
+        text: "⏰ *[TEST] Reminder:* Voting closes in 5 minutes! Vote now using the poll buttons below.",
+      });
+      console.log("[adminquicktest] voting reminder posted");
+    } catch (err) {
+      console.error("[adminquicktest] voting reminder error:", err);
+    }
+  }, 720_000);
 
   // Phase 3: End (13 min)
   setTimeout(async () => {
