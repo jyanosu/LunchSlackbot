@@ -27,6 +27,7 @@ export default async function handleBegin({
 
   add(userId, channelId, "begin", null);
   await (say as any)({
+    text: "Start lunch suggestions for today?",
     blocks: [
       {
         type: "section",
