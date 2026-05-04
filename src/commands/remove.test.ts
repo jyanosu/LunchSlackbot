@@ -94,42 +94,36 @@ describe("remove command", () => {
 
 describe("handleConfirmation", () => {
   const mockAck = vi.fn().mockResolvedValue(undefined);
+  const mockPostMessage = vi.fn().mockResolvedValue({ ok: true });
+  const mockClient = { chat: { postMessage: mockPostMessage } };
 
   it("skips bot messages", async () => {
     mockCheck.mockReturnValue(undefined);
-
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: true, user: "U1", channel: "C1", text: "yes" }, say, ack: mockAck });
+    await handleConfirmation({ event: { type: "message", bot_id: "B123", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
 
     expect(mockAck).toHaveBeenCalled();
-    expect(say).not.toHaveBeenCalled();
+    expect(mockPostMessage).not.toHaveBeenCalled();
   });
 
   it("ignores non-yes messages", async () => {
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: false, user: "U1", channel: "C1", text: "no" }, say, ack: mockAck });
-
-    expect(say).not.toHaveBeenCalled();
+    await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "no" }, client: mockClient, ack: mockAck });
+    expect(mockPostMessage).not.toHaveBeenCalled();
   });
 
   it("ignores when no pending confirmation", async () => {
     mockCheck.mockReturnValue(undefined);
-
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: false, user: "U1", channel: "C1", text: "yes" }, say, ack: mockAck });
-
-    expect(say).not.toHaveBeenCalled();
+    await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
+    expect(mockPostMessage).not.toHaveBeenCalled();
   });
 
   it("starts round on begin confirmation", async () => {
     mockCheck.mockReturnValue({ type: "begin", payload: null });
+    await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
 
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: false, user: "U1", channel: "C1", text: "yes" }, say, ack: mockAck });
-
-    expect(say).toHaveBeenCalledWith(
-      "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST."
-    );
+    expect(mockPostMessage).toHaveBeenCalledWith({
+      channel: "C1",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+    });
   });
 
   it("removes place on remove confirmation", async () => {
@@ -139,19 +133,18 @@ describe("handleConfirmation", () => {
     });
     mockRemoveSuggestion.mockReturnValue(true);
 
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: false, user: "U1", channel: "C1", text: "yes" }, say, ack: mockAck });
+    await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
 
     expect(mockRemoveSuggestion).toHaveBeenCalledWith("Taco Bell");
-    expect(say).toHaveBeenCalledWith("✅ Removed *Taco Bell* from today's suggestions.");
+    expect(mockPostMessage).toHaveBeenCalledWith({
+      channel: "C1",
+      text: "✅ Removed *Taco Bell* from today's suggestions.",
+    });
   });
 
   it("handles case-insensitive yes", async () => {
     mockCheck.mockReturnValue({ type: "begin", payload: null });
-
-    const say = vi.fn().mockResolvedValue(undefined);
-    await handleConfirmation({ event: { bot: false, user: "U1", channel: "C1", text: "YES" }, say, ack: mockAck });
-
-    expect(say).toHaveBeenCalled();
+    await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "YES" }, client: mockClient, ack: mockAck });
+    expect(mockPostMessage).toHaveBeenCalled();
   });
 });
