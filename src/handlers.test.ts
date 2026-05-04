@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleAppMention } from "./handlers";
+import { handleAppMention, routeCommand, KNOWN_COMMANDS } from "./handlers";
 
 beforeEach(() => {
   vi.resetModules();
@@ -65,10 +65,53 @@ describe("handleAppMention router", () => {
     expect(say).not.toHaveBeenCalledWith(expect.stringContaining("Unknown command"));
   });
 
+  it("routes 'list' command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleAppMention({ say, event: { text: "@LunchSlackBot list", user: "U1", channel: "C1" } });
+
+    expect(say).toHaveBeenCalled();
+    expect(say).not.toHaveBeenCalledWith(expect.stringContaining("Unknown command"));
+  });
+
   it("handles empty event gracefully", async () => {
     const say = vi.fn().mockResolvedValue(undefined);
     await handleAppMention({ say });
 
     expect(say).toHaveBeenCalledWith("🍱 *Lunchbot* — lunch suggestion bot");
+  });
+});
+
+describe("routeCommand", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("dispatches 'help' command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await routeCommand("help", { say });
+
+    expect(say).toHaveBeenCalledWith(expect.stringContaining("LunchBot Commands"));
+  });
+
+  it("dispatches 'list' command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await routeCommand("list", { say });
+
+    // list command will try to get today's data; with no store, it should handle gracefully
+    expect(say).toHaveBeenCalled();
+  });
+
+  it("does nothing for unknown command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await routeCommand("unknown", { say });
+
+    expect(say).not.toHaveBeenCalled();
+  });
+
+  it("handler receives correct context", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await routeCommand("help", { say, args: "test", userId: "U1", channelId: "C1" });
+
+    expect(say).toHaveBeenCalled();
   });
 });
