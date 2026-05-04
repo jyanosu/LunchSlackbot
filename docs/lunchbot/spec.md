@@ -98,7 +98,7 @@ After Phase 1's bot skeleton, Phase 2 adds lunch suggestion collection, deadline
    list - show today's lunch suggestions
    help - show this message
    ```
-6. **Persistence** — Suggestions survive bot restarts. Saved suggestions are available the next day if needed.
+7. **Persistence** — Suggestions survive bot restarts. Saved suggestions are available the next day if needed.
 
 ## Design
 
@@ -143,25 +143,24 @@ interface LunchStore {
 
 ### Confirmation system
 
-Both `begin` and `remove` require user confirmation via `message_events`. A shared confirmation map keyed by `${userId}:${channelId}:${action}` prevents collisions between pending actions.
+Both `begin` and `remove` require user confirmation via button clicks (`block_actions`). A shared confirmation map keyed by `${userId}:${channelId}:${action}` prevents collisions between pending actions.
 
 **Shared behavior:**
-- Listener **skips bot messages** (`event.bot === true`) to avoid self-triggering.
 - Pending confirmation expires after 60 seconds.
-- If the message is `yes` (case-insensitive), execute the pending action and clear the entry.
-- If no response or anything else, do nothing (no follow-up nag).
+- On button click, execute the pending action, clear the entry, and update the message in place.
+- If no response or timeout, do nothing (no follow-up nag).
 
 **`begin` flow:**
 1. If a round is **already active for today** → reply: `Lunch suggestions are already open for today. Use @LunchSlackBot suggest <place> to add a place.`
-2. If **no round is active** → reply: `Start lunch suggestions for today? Reply with "yes" to confirm.`
+2. If **no round is active** → send button: `Start lunch suggestions for today?` with Yes button (`action_id: confirm_begin`)
 3. Store pending begin keyed by `${userId}:${channelId}:begin`.
-4. On confirmation → start the round and reply: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.`
+4. On confirmation → start the round and update message: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.`
 
 **`remove` flow:**
 1. Validate place exists in today's suggestions → "not found" reply if not.
-2. Reply: `Remove *<place>* from today's suggestions? Reply with "yes" to confirm.`
+2. Send button: `Remove *<place>* from today's suggestions?` with Yes button (`action_id: confirm_remove`)
 3. Store pending removal keyed by `${userId}:${channelId}:remove`.
-4. On confirmation → remove the place and confirm.
+4. On confirmation → remove the place and update message.
 
 ### Deadline handling
 
@@ -192,8 +191,7 @@ src/
 |---|---|---|
 | Storage | In-memory + JSON backup | In-memory for speed; JSON written as backup; data resets on Render deploy (acceptable for Phase 2) |
 | Command parsing | Text split from app_mention | Reuses existing event; no slash command setup needed |
-| Remove confirmation | Reply + listen for "yes" | Prevents accidental deletions; simple, no Slack modal needed |
-| Begin confirmation | Reply + listen for "yes" | Prevents accidental resets; consistent with remove pattern |
+| Confirmation | Button-based (`block_actions`) | More reliable than message events; in-place message update |
 | Confirmation keying | `${userId}:${channelId}:${action}` | Prevents collisions when multiple pending actions exist |
 | Timezone | EST (fixed) | Matches default; no DST logic needed |
 | Duplicate suggestions | Rejected | Bot replies that the place is already suggested |
@@ -230,9 +228,135 @@ src/
 - Voting mechanism (Phase 3).
 - Multi-channel support — single channel only.
 - Slash commands — all commands via `app_mention`.
-- Slack interactive modals for confirmation — plain text reply used instead.
 - Persistent storage across deploys — Render filesystem is ephemeral (Phase 3 database).
 
 ### Slack Permissions
 
 - Phase 2 requires the `channels:history` scope (to listen to `message_events` for remove confirmations). The Slack app must be re-installed after deploying Phase 2 to grant this scope.
+
+---
+
+# Phase 3 — Slash Commands
+
+## What
+
+Add Slack slash commands as an alternative to `@LunchSlackBot` mentions. All existing commands are accessible via `/lsb-<command>`. Both invocation methods work simultaneously.
+
+## Context
+
+- Phase 2 commands work via `app_mention` with subcommand parsing.
+- Command handlers accept `{ say, args, userId, channelId }`.
+- Bolt handles slash commands via `app.command('/command-name', handler)`.
+- Slash commands require registration in Slack App → **Slash Commands** (separate from Event Subscriptions).
+
+## Requirements
+
+1. Each Phase 2 command has a slash command equivalent:
+   | Slash command | Equivalent |
+   |---|---|
+   | `/lsb-begin` | `@LunchSlackBot begin` |
+   | `/lsb-suggest <place>` | `@LunchSlackBot suggest <place>` |
+   | `/lsb-deadline <time>` | `@LunchSlackBot suggestiondeadline <time>` |
+   | `/lsb-remove <place>` | `@LunchSlackBot remove <place>` |
+   | `/lsb-list` | `@LunchSlackBot list` |
+   | `/lsb-help` | `@LunchSlackBot help` |
+2. Slash commands reuse existing command handlers — no duplicate logic.
+3. Both `@LunchSlackBot` mentions and slash commands work simultaneously.
+4. `help` output lists both invocation methods.
+
+## Design
+
+### Handler abstraction
+
+Extract the shared routing logic from `handleAppMention` into a reusable function:
+
+```typescript
+// handlers.ts
+export async function loadCommandHandlers(): Promise<Record<string, Function>>;
+
+export async function routeCommand(
+  command: string,
+  { say, args, userId, channelId }: CommandContext
+): Promise<void>;
+```
+
+- `loadCommandHandlers()` returns a map of command name → handler. Keys match existing registry: `begin`, `suggest`, `suggestiondeadline`, `remove`, `list`, `help`.
+- `routeCommand(command, context)` looks up the handler by command name and calls it. If the command is unknown, it does nothing (caller is responsible for validation).
+- `handleAppMention` parses text → validates against `KNOWN_COMMANDS` → calls `routeCommand`.
+- Each `app.command()` handler extracts args from `body.text ?? ''` (defensive: Slack sends `""` for no args, but `undefined` is possible in edge cases) → calls `routeCommand`.
+
+### Slash command mapping
+
+| Bolt registration | Command name | Args source |
+|---|---|---|
+| `app.command('/lsb-begin')` | `begin` | none |
+| `app.command('/lsb-suggest')` | `suggest` | `body.text ?? ''` (entire text is the place) |
+| `app.command('/lsb-deadline')` | `suggestiondeadline` | `body.text ?? ''` (entire text is the time) |
+| `app.command('/lsb-remove')` | `remove` | `body.text ?? ''` (entire text is the place) |
+| `app.command('/lsb-list')` | `list` | none |
+| `app.command('/lsb-help')` | `help` | none |
+
+For slash commands, `body.text` is everything after the command name (Bolt strips the `/lsb-<name>` prefix). Use `body.text ?? ''` defensively — Slack sends `""` for no args, but `undefined` is possible in edge cases.
+
+### Help output update
+
+```
+🍱 *LunchBot Commands:*
+begin (/lsb-begin) - start the lunch poll for the day
+suggest <place> (/lsb-suggest) - add a lunch place to today's poll
+suggestiondeadline <time> (/lsb-deadline) - set the suggestion deadline (default 11:00 AM EST)
+remove <place> (/lsb-remove) - remove a suggestion from today's poll
+list (/lsb-list) - show today's lunch suggestions
+help (/lsb-help) - show this message
+```
+
+### Slack App configuration
+
+In [api.slack.com/apps](https://api.slack.com/apps) → **Slash Commands**:
+- Add each command with Request URL: `https://lunchslackbot.onrender.com/slack/commands`
+- Bolt handles the `/slack/commands` endpoint automatically when `app.command()` is used
+- Required scope: `chat:write` (already added in Phase 2 for button confirmations)
+- After adding, **reinstall** the app to apply
+
+### File structure
+
+```
+src/
+  handlers.ts         — routeCommand + commandHandlers (extracted)
+  slash.ts            — app.command() registrations, calls routeCommand
+```
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Prefix | `/lsb-` | Short, unique, avoids collisions with other bots |
+| Reuse handlers | Yes | Single source of truth; no duplicate logic to maintain |
+| `suggestiondeadline` → `/lsb-deadline` | Shorter name | Slash commands benefit from brevity; `suggestiondeadline` is unwieldy |
+| Both methods coexist | Yes | Users choose their preference; no migration needed |
+
+## Invariants
+
+- Slash command and app_mention produce identical behavior for the same command.
+- Command handlers are never duplicated — routed from a single registry.
+
+## Error Behavior
+
+- Unknown slash command → Slack shows "Command not found" (handled by not registering it).
+- `routeCommand` called with unknown command → does nothing silently (caller is responsible for validation against `KNOWN_COMMANDS`).
+- Missing args (e.g., `/lsb-suggest` with no text) → same validation as app_mention path (command handlers check for empty args).
+- `body.text` is `undefined` → handled defensively with `body.text ?? ''`.
+- Slash command response timeout → Bolt handles async responses automatically via `ack()` + `say()`.
+
+## Testing Strategy
+
+- Unit test: `routeCommand` dispatches to correct handler for each command name.
+- Unit test: slash command handler extracts args from `body.text` correctly.
+- Unit test: `help` output includes slash command equivalents.
+- Manual: verify each slash command in Slack produces same result as app_mention equivalent.
+
+## Out of Scope (Phase 3)
+
+- Removing app_mention support — both methods coexist.
+- New commands — only existing Phase 2 commands get slash equivalents.
+- Command aliases beyond `/lsb-` prefix.
