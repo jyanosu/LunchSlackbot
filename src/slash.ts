@@ -41,4 +41,14 @@ export function registerSlashCommands(app: App) {
     await ack();
     await routeCommand("showpoll", { say, args: "", userId: body.user_id, channelId: body.channel_id });
   });
+
+  app.command("/lsb-showmasterlist", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("showmasterlist", { say, args: "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-removefrommasterlist", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("removefrommasterlist", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
 }

@@ -75,4 +75,6 @@ https://lunchslackbot.onrender.com/slack/events
 | `@LunchSlackBot list` | `/lsb-list` | Show today's suggestions |
 | `@LunchSlackBot vote` | `/lsb-vote` | Start voting on suggestions |
 | `@LunchSlackBot showpoll` | `/lsb-showpoll` | Show the current poll |
+| `@LunchSlackBot showmasterlist` | `/lsb-showmasterlist` | Show the master suggestion list |
+| `@LunchSlackBot removefrommasterlist <place>` | `/lsb-removefrommasterlist` | Remove from master list |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |

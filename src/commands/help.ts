@@ -16,6 +16,8 @@ export default async function handleHelp({
       "list (/lsb-list) - show today's lunch suggestions",
       "vote (/lsb-vote) - start voting on today's suggestions",
       "showpoll (/lsb-showpoll) - show the current poll",
+      "showmasterlist (/lsb-showmasterlist) - show the master suggestion list",
+      "removefrommasterlist <place> (/lsb-removefrommasterlist) - remove from master list",
       "help (/lsb-help) - show this message",
     ].join("\n")
   );

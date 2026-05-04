@@ -23,7 +23,7 @@ describe("registerSlashCommands", () => {
 
     registerSlashCommands(mockApp);
 
-    expect(mockApp.command).toHaveBeenCalledTimes(8);
+    expect(mockApp.command).toHaveBeenCalledTimes(10);
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-begin", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-suggest", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-deadline", expect.any(Function));
@@ -31,6 +31,8 @@ describe("registerSlashCommands", () => {
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-list", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-vote", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-showpoll", expect.any(Function));
+    expect(mockApp.command).toHaveBeenCalledWith("/lsb-showmasterlist", expect.any(Function));
+    expect(mockApp.command).toHaveBeenCalledWith("/lsb-removefrommasterlist", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-help", expect.any(Function));
   });
 

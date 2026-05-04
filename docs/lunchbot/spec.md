@@ -530,3 +530,352 @@ src/
 - Per-user poll view (all users see the same buttons).
 - Win announcement / results.
 - Auto-starting voting when suggestions hit zero (the `vote` command rejects with no suggestions, returning an error message).
+
+---
+
+# Phase 5 — Master Suggestion List
+
+## What
+
+Maintain a persistent master list of all suggested lunch places across days. When a user suggests a place, it's added to the master list if not already present. Commands exist to view and manage the list. The master list enables a future feature where the bot randomly picks places to fill out the poll.
+
+## Context
+
+- Phase 2: `suggest` adds places to today's daily suggestions.
+- Phase 4: voting on daily suggestions.
+- Store persists `LunchStore` with `days` (keyed by date) + `votes` + `userNames`.
+- Render filesystem is ephemeral — master list uses same in-memory + JSON backup pattern.
+- Place names are case-insensitive for uniqueness checks.
+
+## Requirements
+
+1. **Master list** — A persistent `Set<string>` of all suggested places, shared across days.
+2. **`suggest` integration** — When `suggest <place>` adds a place to today's suggestions, also add it to the master list if not already present.
+3. **`@LunchSlackBot showmasterlist`** — Shows the master list as a numbered list. If empty, prompts the user to suggest a place.
+4. **`@LunchSlackBot removefrommasterlist <place>`** — Removes `<place>` from the master list. Does **not** affect today's suggestions.
+5. Slash commands:
+   - `/lsb-showmasterlist` → `showmasterlist`
+   - `/lsb-removefrommasterlist <place>` → `removefrommasterlist`
+6. Uniqueness: master list entries are unique (case-insensitive). Suggesting a place already in the master list is a no-op for the master list (but may still add to today's suggestions if not already suggested today).
+
+## Design
+
+### Data model
+
+Extend `LunchStore`:
+
+```typescript
+export interface LunchStore {
+  days: Record<string, LunchDay>;
+  votes: VoteStore;
+  userNames: Map<string, string>;
+  masterList: Set<string>;  // lowercase place names, unique
+}
+```
+
+On JSON persist, `masterList` (Set) is converted to an array. On load, the array is converted back to a Set.
+
+### Suggest integration
+
+In `commands/suggest.ts`, after adding the place to today's suggestions:
+1. Normalize the place name to lowercase.
+2. Check if it exists in the master list.
+3. If not, add it to the master list.
+4. Save the store.
+
+### Showmasterlist command
+
+`@LunchSlackBot showmasterlist` → reply:
+- If master list is empty: `No places in the master list yet. Use @LunchSlackBot suggest <place> to add one.`
+- If populated: numbered list:
+  ```
+  📋 *Master Suggestion List* (${count} places):
+  1. Taco Bell
+  2. Chipotle
+  3. In-N-Out
+  ```
+
+### RemoveFromMasterlist command
+
+`@LunchSlackBot removefrommasterlist <place>` → reply:
+- If place not found in master list: `*<place>* is not in the master list.`
+- If found: remove and reply: `Removed *<place>* from the master list.`
+
+### Slash command mapping
+
+| Slash command | Command name | Args |
+|---|---|---|
+| `/lsb-showmasterlist` | `showmasterlist` | none |
+| `/lsb-removefrommasterlist` | `removefrommasterlist` | `body.text ?? ''` (place name) |
+
+### File structure
+
+```
+src/
+  store.ts              — add masterList to LunchStore
+  commands/
+    suggest.ts          — add to master list on suggest
+    showmasterlist.ts   — handleShowmasterlist
+    removefrommasterlist.ts — handleRemoveFromMasterlist
+  handlers.ts           — add showmasterlist, removefrommasterlist to KNOWN_COMMANDS + routeCommand
+  slash.ts              — add /lsb-showmasterlist, /lsb-removefrommasterlist
+```
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Uniqueness | Case-insensitive | "taco bell" and "Taco Bell" are the same place |
+| Storage | In-memory Set + JSON backup | Matches existing store pattern |
+| Remove scope | Master list only | Today's suggestions are separate; removing from master list doesn't affect active polls |
+| Display format | Numbered list | Consistent with `list` command |
+
+## Invariants
+
+- Master list entries are unique (case-insensitive).
+- Adding a place to the master list is idempotent.
+- Removing from the master list does not affect today's suggestions.
+- `suggest` always adds to the master list (unless already present).
+
+## Error Behavior
+
+- `showmasterlist` with empty list → "No places in the master list yet. Use @LunchSlackBot suggest <place> to add one."
+- `removefrommasterlist` with no place → "Usage: @LunchSlackBot removefrommasterlist <place>"
+- `removefrommasterlist` with unknown place → "*<place>* is not in the master list."
+
+## Testing Strategy
+
+- Unit test: `suggest` adds new place to master list.
+- Unit test: `suggest` skips master list add when place already exists.
+- Unit test: `showmasterlist` shows numbered list / empty message.
+- Unit test: `removefrommasterlist` removes place / rejects unknown place.
+- Unit test: store masterList persistence (Set ↔ array conversion).
+- Unit test: slash commands route correctly.
+
+## Out of Scope (Phase 5)
+
+- Randomly picking places from the master list (future phase).
+- Categorizing places (e.g., Mexican, Asian).
+- Rating or ranking places.
+- Importing places from external sources.
+
+---
+
+# Phase 7 — Suggest From Master List
+
+## What
+
+Add a `suggestfrommasterlist` command that randomly picks places from the master list and adds them as today's suggestions. Accepts an optional count argument (default 5).
+
+## Context
+
+- Phase 5: master list stores all suggested places across days.
+- Phase 2: `suggest` adds places to today's suggestions with duplicate checking.
+- `addSuggestion()` returns `false` for duplicates, `true` on success.
+- Command is accessible via `@LunchSlackBot suggestfrommasterlist` (app_mention only, no slash command).
+
+## Requirements
+
+1. **`@LunchSlackBot suggestfrommasterlist`** — Randomly picks 5 places from master list and adds to today's suggestions.
+2. **`@LunchSlackBot suggestfrommasterlist <count>`** — Picks `<count>` places (e.g., `suggestfrommasterlist 3` picks 3).
+3. If count exceeds available places, pick all available and report actual count.
+4. Places already in today's suggestions are skipped (not an error).
+5. Reply reports: how many were added, how many were skipped.
+6. Empty master list → prompts to seed or suggest.
+7. Round not started → prompts to begin.
+
+## Design
+
+### Command
+
+`@LunchSlackBot suggestfrommasterlist` → reply:
+```
+🎲 Picked 5 places from master list.
+
+Added:
+• taco bell
+• chipotle
+• in-n-out
+• panda express
+• subway
+
+Current suggestions:
+• taco bell
+• chipotle
+• in-n-out
+• panda express
+• subway
+```
+
+With duplicates:
+```
+🎲 Picked 5 places from master list.
+
+Added:
+• chipotle
+• in-n-out
+
+Already suggested (skipped):
+• taco bell
+• panda express
+• subway
+
+Current suggestions:
+• taco bell
+• chipotle
+• in-n-out
+• panda express
+• subway
+```
+
+### Count parsing
+
+- Parse `args` as integer. If invalid or missing, default to 5.
+- Clamp to `Math.min(count, masterList.size)` — never exceed available.
+- If count < 1, default to 5.
+
+### File structure
+
+```
+src/
+  commands/
+    suggestfrommasterlist.ts  — handleSuggestFromMasterlist
+  handlers.ts                 — add suggestfrommasterlist to KNOWN_COMMANDS + routeCommand
+```
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Default count | 5 | Reasonable number for lunch voting; not too few, not too many |
+| Shuffle algorithm | `Math.random()` | Simple, sufficient for lunch picking; no cryptographic needs |
+| Duplicate handling | Skip silently | User wants variety; already-suggested places are noted in reply |
+| Never fails | Reports partial success | Better UX than erroring when count > available |
+| No slash command | app_mention only | Consistent with admin-style commands |
+
+## Invariants
+
+- Command never throws — always replies with a message.
+- Duplicate places are skipped, not errored.
+- Count is clamped to available places.
+
+## Error Behavior
+
+- Empty master list → "Master list is empty. Use @LunchSlackBot suggest <place> or seedmasterlist to add places."
+- Round not started → "Lunch suggestions haven't started yet. Use @LunchSlackBot begin to start."
+- Invalid count (e.g., `abc`, negative) → default to 5.
+- Count exceeds available → pick all available, report actual count.
+
+## Testing Strategy
+
+- Unit test: picks 5 places by default.
+- Unit test: respects custom count argument.
+- Unit test: clamps count to available places.
+- Unit test: skips duplicates and reports them.
+- Unit test: handles empty master list.
+- Unit test: prompts to begin when round not started.
+
+## Out of Scope (Phase 7)
+
+- Slash command equivalent.
+- Weighted preferences (e.g., favor places voted more).
+- Categorization filtering (e.g., "pick 3 Mexican places").
+- Guaranteeing unique picks across multiple invocations.
+
+---
+
+# Phase 6 — Admin Reset
+
+## What
+
+Add an `adminreset` command that clears daily state (suggestions, votes, userNames) and resets to initial empty state. The master list is **preserved**. Intended for admin use only — not listed in help output.
+
+## Context
+
+- Phase 5: master list, voting, daily suggestions all stored in `LunchStore`.
+- Store persists to `data/lunch.json` as in-memory + JSON backup.
+- Render filesystem is ephemeral — reset provides a clean state without waiting for redeploy.
+- Command is accessible via `@LunchSlackBot adminreset` (app_mention only, no slash command).
+- Confirmation system uses button-based `block_actions` (Phase 2 pattern).
+
+## Requirements
+
+1. **`@LunchSlackBot adminreset`** — Prompts for confirmation. On confirmation, clears `days`, `votes`, `userNames` but **preserves `masterList`**. Saves state to JSON. Replies confirming the reset.
+2. Not listed in `help` output.
+3. Requires button confirmation (`action_id: confirm_adminreset`) before executing.
+4. No slash command equivalent.
+
+## Design
+
+### Command
+
+`@LunchSlackBot adminreset` → sends button: `Reset LunchBot? This will clear today's suggestions, votes, and user data. Master list will be preserved.` with Yes button (`action_id: confirm_adminreset`).
+
+On confirmation → clear state and **update the confirmation message in-place** (`chat.update`): `🗑️ LunchBot has been reset. Master list preserved.`
+
+### Store function
+
+Add `resetStore()` to `store.ts`:
+- Clears `days`, `votes`, `userNames` to empty initial state.
+- **Preserves** `masterList`.
+- Saves state to `data/lunch.json`.
+
+### Confirmation
+
+Uses the existing confirmation map pattern from Phase 2:
+- Key: `${userId}:${channelId}:adminreset`
+- Pending confirmation expires after 60 seconds (shared behavior).
+- On timeout or no response, do nothing.
+
+### Routing
+
+- Add `adminreset` to `KNOWN_COMMANDS` + `routeCommand` in `handlers.ts`.
+- No slash command registration.
+- No help entry.
+
+### File structure
+
+```
+src/
+  store.ts              — add resetStore()
+  commands/
+    adminreset.ts       — handleAdminreset, handleAdminResetConfirm (block_actions)
+  handlers.ts           — add adminreset to KNOWN_COMMANDS + routeCommand
+```
+
+## Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Confirmation required | Button click | Prevents accidental resets |
+| Master list preserved | Not cleared | Master list is the accumulated knowledge base; resetting it defeats its purpose |
+| No slash command | app_mention only | Reduces surface area; admins use @mention anyway |
+| Not in help | Hidden command | Discourages casual use; admins know the command |
+
+## Invariants
+
+- `masterList` is never cleared by `resetStore`.
+- `data/lunch.json` is written with cleared state (preserving masterList) after reset.
+- Help output does not reference `adminreset`.
+- Confirmation must come from the same user/channel that invoked the command.
+
+## Error Behavior
+
+- `resetStore` file write failure → best-effort, silently ignored (matches existing store pattern).
+- Confirmation button click with no pending confirmation → return early silently.
+- Confirmation button click from different user/channel → no match (keyed by `${userId}:${channelId}:adminreset`).
+
+## Testing Strategy
+
+- Unit test: `resetStore` clears days, votes, userNames to empty state.
+- Unit test: `resetStore` preserves masterList.
+- Unit test: `resetStore` saves state to JSON.
+- Unit test: `adminreset` handler sends confirmation button.
+- Unit test: confirmation handler executes reset and replies.
+- Unit test: `help` output does not include `adminreset`.
+
+## Out of Scope (Phase 6)
+
+- Admin authentication or role checks.
+- Partial resets (e.g., clear only votes).
+- Slash command equivalent.
