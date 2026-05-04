@@ -74,11 +74,11 @@ async function runVote(client: any, channel: string): Promise<void> {
 
   // Import buildPollBlocks dynamically to avoid circular deps
   const { buildPollBlocks } = await import("./commands/vote");
-  const { setPollMessageTs, getSchedule } = await import("./store");
+  const { setPollMessageTs, getSchedule, getExpandedSuggestions } = await import("./store");
 
   const schedule = getSchedule();
   const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
-  const blocks = await buildPollBlocks(day.suggestions, undefined, client);
+  const blocks = await buildPollBlocks(day.suggestions, undefined, client, getExpandedSuggestions());
 
   await client.chat.postMessage({
     channel,

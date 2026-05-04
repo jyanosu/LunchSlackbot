@@ -87,11 +87,11 @@ export default async function handleAdminQuickTest({
       }
 
       const { buildPollBlocks } = await import("./vote");
-      const { getSchedule } = await import("../store");
+      const { getSchedule, getExpandedSuggestions } = await import("../store");
 
       const schedule = getSchedule();
       const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
-      const blocks = await buildPollBlocks(day.suggestions, undefined, client);
+      const blocks = await buildPollBlocks(day.suggestions, undefined, client, getExpandedSuggestions());
 
       await client.chat.postMessage({
         channel: channelId,

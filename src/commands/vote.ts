@@ -1,4 +1,4 @@
-import { getToday, getVotes, hasVoted, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule } from "../store";
+import { getToday, getVotes, hasVoted, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule, getExpandedSuggestions } from "../store";
 
 const DEFAULT_DEADLINE = "11:45 AM";
 
@@ -16,7 +16,8 @@ export interface VoteCommandContext {
 export async function buildPollBlocks(
   suggestions: string[],
   clickingUserId?: string,
-  client?: any
+  client?: any,
+  expandedSuggestions?: Set<string>
 ): Promise<Array<Record<string, unknown>>> {
   const sorted = [...suggestions].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "accent" }));
   const blocks: Array<Record<string, unknown>> = [];
@@ -61,32 +62,38 @@ export async function buildPollBlocks(
     const userVoted = clickingUserId ? hasVoted(place, clickingUserId) : false;
     const buttonIcon = userVoted ? "✅" : "☐";
 
-    // Voter text for confirm dialog
-    const voterText = voteCount > 0
-      ? `*${voteCount} vote${voteCount > 1 ? "s" : ""}* — ${voterNames}`
-      : "No votes yet. Be the first!";
-
-    // Actions block: toggle button with name + count + confirm dialog
-    blocks.push({
-      type: "actions",
-      elements: [
-        {
-          type: "button",
-          text: {
-            type: "plain_text",
-            text: `${buttonIcon} ${place} (${voteCount})`,
-          },
-          value: place,
-          action_id: "vote_toggle",
-          confirm: {
-            title: { type: "plain_text", text: `Vote for ${place}?` },
-            text: { type: "mrkdwn", text: voterText },
-            confirm_text: { type: "plain_text", text: "Vote" },
-            deny_text: { type: "plain_text", text: "Cancel" },
-          },
+    // Actions block: toggle button + optional ? button
+    const elements: Record<string, unknown>[] = [
+      {
+        type: "button",
+        text: {
+          type: "plain_text",
+          text: `${buttonIcon} ${place} (${voteCount})`,
         },
-      ],
-    });
+        value: place,
+        action_id: "vote_toggle",
+      },
+    ];
+
+    // Add ? button if there are votes
+    if (voteCount > 0) {
+      elements.push({
+        type: "button",
+        text: { type: "plain_text", text: "?" },
+        value: place,
+        action_id: "expand_voters",
+      });
+    }
+
+    blocks.push({ type: "actions", elements });
+
+    // Show voter list if expanded
+    if (expandedSuggestions?.has(place) && voteCount > 0) {
+      blocks.push({
+        type: "section",
+        text: { type: "mrkdwn", text: `— ${voterNames}` },
+      });
+    }
   }
 
   return blocks;
@@ -136,7 +143,7 @@ export default async function handleVote({
 
   // Build poll message
   const deadline = votingDay.deadline || DEFAULT_DEADLINE;
-  const blocks = await buildPollBlocks(votingDay.suggestions, client);
+  const blocks = await buildPollBlocks(votingDay.suggestions, client, undefined, getExpandedSuggestions());
 
   const message = await (say as any)({
     text: `🗳️ *Voting is open!* Closes at ${endTime}`,
@@ -219,7 +226,7 @@ export async function handleVoteToggle({
   // Rebuild poll message
   const schedule2 = getSchedule();
   const endTime2 = schedule2.endTime ? `${schedule2.endTime} EST` : "not set";
-  const blocks = await buildPollBlocks(today.suggestions, userId, client);
+  const blocks = await buildPollBlocks(today.suggestions, userId, client, getExpandedSuggestions());
 
   await client.chat.update({
     channel: channelId,

@@ -1,90 +1,84 @@
-# Phase 12 — Hide Voter List, Show on Hover
+# Phase 12 — Expandable Voter List
 
 ## What
 
-Remove the voter name list displayed under each poll option. Show voter names in a Slack confirm dialog when the button is clicked (before toggling the vote).
+Replace the always-visible voter list under each poll option with a `?` button that appears only when there is at least one vote. Clicking `?` expands the poll to show voter names beneath that option. Clicking again collapses it.
 
 ## Context
 
-- Current poll layout per suggestion: `actions` (toggle button) → `section` (voter names)
-- Slack buttons have no native hover support
-- Slack `confirm` field on buttons shows a modal dialog with optional text
-- Button `value` is plain text (max 75 chars), used to identify the suggestion
-- `action_id: vote_toggle` identifies the handler
+- Current poll layout per suggestion: `actions` (toggle button) → voter list removed in previous attempt
+- Slack buttons are shared across viewers (can't show per-user state in labels)
+- Poll message is updated in-place via `chat.update` with `pollMessageTs`
+- Single `action_id: vote_toggle` handles vote toggling
+- Need a second `action_id` for expand/collapse
 
 ## Requirements
 
-1. **Remove voter list section** — No more "— Alice, Bob" under buttons.
-2. **Confirm dialog** — Clicking a vote button shows a confirm dialog with:
-   - Title: "Vote for <place>?"
-   - Text: Vote count + voter names (if any)
-   - Confirm label: "Vote"
-   - Deny label: "Cancel"
-3. **Toggle on confirm only** — Vote toggles only when user clicks "Vote" in the dialog.
-4. **Count still visible** — Button text shows `✅ Taco Bell (3)` as before.
+1. **`?` button** — Small button labeled `?` next to the vote toggle button. Visible only when `voteCount > 0`.
+2. **Expand on click** — Clicking `?` rebuilds the poll with voter names shown under that option.
+3. **Collapse on click** — Clicking `?` again hides the voter list.
+4. **Per-option state** — Each option independently tracks whether its voter list is expanded.
+5. **Toggle button unchanged** — Vote toggle button works as before, side-by-side with `?`.
 
 ## Design
 
-### Confirm field on button
+### Block layout per suggestion
 
-```typescript
-{
-  type: "button",
-  text: { type: "plain_text", text: `${buttonIcon} ${place} (${voteCount})` },
-  value: place,
-  action_id: "vote_toggle",
-  confirm: {
-    title: { type: "plain_text", text: `Vote for ${place}?` },
-    text: { type: "mrkdwn", text: voterText },
-    confirm_text: { type: "plain_text", text: "Vote" },
-    deny_text: { type: "plain_text", text: "Cancel" },
-  },
-}
+```
+actions: [vote toggle button, ? button (if votes > 0)]
+section: voter names (only when expanded)
 ```
 
-### Voter text in dialog
+### Expanded state
 
-- `voteCount > 0`: `*${voteCount} vote(s)* — ${voterNames}`
-- `voteCount === 0`: `No votes yet. Be the first!`
+Store `expandedSuggestions: Set<string>` on `LunchDay` to track which suggestions have their voter list expanded. Persists in `data/lunch.json`.
 
-### Handler behavior
+### New action
 
-- `handleVoteToggle` receives the action regardless of confirm/deny (Slack sends the action on confirm; deny sends nothing)
-- No change to handler logic — it already toggles on button click
+`action_id: expand_voters` with `value: <place>` identifies which suggestion to expand/collapse.
 
-### Removed blocks
+Handler: toggle the place in `expandedSuggestions`, rebuild poll blocks, `chat.update`.
 
-The `section` block with voter names is removed from `buildPollBlocks`.
+### Button layout
+
+Two buttons in one `actions` block:
+- `✅ Taco Bell (3)` — vote toggle (always visible)
+- `?` — expand voters (visible only when votes > 0)
+
+### Poll rebuild
+
+Both `vote_toggle` and `expand_voters` handlers rebuild the full poll via `buildPollBlocks` and update in-place. `buildPollBlocks` accepts `expandedSuggestions` to know which voter lists to show.
 
 ## Decisions
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Hover mechanism | Confirm dialog | Slack has no hover; confirm is closest |
-| Toggle on confirm | Yes | User explicitly confirms their vote |
-| Deny behavior | No action | Slack doesn't send action on deny |
-| Voter text in dialog | mrkdwn | Supports bold count |
-| Button value | Unchanged | Already identifies suggestion |
+| State tracking | `expandedSuggestions` on `LunchDay` | Persists across updates, same pattern as votes |
+| Button label | `?` | Minimal, clear intent |
+| Two buttons per row | Same `actions` block | Compact, related actions |
+| Collapse behavior | Toggle (click again to hide) | User control, no auto-collapse |
+| Expand survives vote toggle | Yes | Independent states |
 
 ## Invariants
 
-- Vote count in button text always matches actual votes.
-- Confirm dialog always shows current voter list (rebuilt on each poll update).
-- Denying the dialog does not toggle the vote.
+- `?` button only appears when `voteCount > 0`.
+- Expanded state is per-option, independent of vote state.
+- Poll message is always consistent with store state after update.
 
 ## Error Behavior
 
-- Voter names unavailable: show user ID (same as before).
-- Confirm dialog text exceeds 75 chars: Slack truncates (no action needed).
+- Unknown place in `expand_voters` value: skip silently.
+- Poll message update fails: log error, do not crash.
 
 ## Testing Strategy
 
-- Unit: `buildPollBlocks` does not include voter section blocks
-- Unit: button includes `confirm` field with correct voter text
-- Unit: button text still shows count
+- Unit: `?` button present when votes > 0, absent when votes = 0
+- Unit: `expand_voters` handler toggles expanded state
+- Unit: expanded voter list shown in blocks when expanded
+- Unit: expanded state persists across poll rebuilds
 
 ## Out of Scope
 
+- Auto-collapse when vote count changes
+- Threading voter details
 - Anonymous voting mode
-- Collapsible voter list
-- Separate "view voters" button

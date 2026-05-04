@@ -8,6 +8,7 @@ vi.mock("../store", () => ({
   getUserNames: vi.fn(),
   setUserName: vi.fn(),
   getSchedule: vi.fn(),
+  getExpandedSuggestions: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -53,6 +54,7 @@ describe("handleShowpoll", () => {
       deadline: "11:45 AM",
     });
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
@@ -74,6 +76,7 @@ describe("handleShowpoll", () => {
       deadline: "11:45 AM",
     });
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "8888888.999" });

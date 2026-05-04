@@ -3,6 +3,7 @@ import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
 import { handleConfirmation, handleBlockAction } from "./commands/remove";
 import { handleVoteToggle } from "./commands/vote";
+import { handleExpandVoters } from "./commands/expandvoters";
 import { loadStore, loadWinners } from "./store";
 import { registerSlashCommands } from "./slash";
 import { initSchedule, setBoltApp } from "./cron";
@@ -27,6 +28,7 @@ app.event("app_mention", handleAppMention);
 app.message(/.*/, handleConfirmation as any);
 app.action(/confirm_/, handleBlockAction as any);
 app.action("vote_toggle", handleVoteToggle as any);
+app.action("expand_voters", handleExpandVoters as any);
 
 registerSlashCommands(app);
 

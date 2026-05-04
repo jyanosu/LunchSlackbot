@@ -192,6 +192,40 @@ describe("store voting", () => {
     expect(getToday()?.pollMessageTs).toBe("1234567890.123456");
   });
 
+  it("getExpandedSuggestions returns empty set when not set", async () => {
+    const { loadStore, setToday, getExpandedSuggestions } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true });
+    expect(getExpandedSuggestions().size).toBe(0);
+  });
+
+  it("toggleExpandedSuggestion adds and removes", async () => {
+    const { loadStore, setToday, getExpandedSuggestions, toggleExpandedSuggestion } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell", "Chipotle"], deadline: "11:00 AM", started: true });
+
+    toggleExpandedSuggestion("Taco Bell");
+    expect(getExpandedSuggestions()).toContain("Taco Bell");
+
+    toggleExpandedSuggestion("Taco Bell");
+    expect(getExpandedSuggestions()).not.toContain("Taco Bell");
+  });
+
+  it("toggleExpandedSuggestion tracks multiple places", async () => {
+    const { loadStore, setToday, getExpandedSuggestions, toggleExpandedSuggestion } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell", "Chipotle"], deadline: "11:00 AM", started: true });
+
+    toggleExpandedSuggestion("Taco Bell");
+    toggleExpandedSuggestion("Chipotle");
+    expect(getExpandedSuggestions().size).toBe(2);
+    expect(getExpandedSuggestions()).toContain("Taco Bell");
+    expect(getExpandedSuggestions()).toContain("Chipotle");
+  });
+
   it("votes persist to file and reload", async () => {
     const { loadStore, setToday, toggleVote, getVotes } = await import("./store");
     loadStore();
