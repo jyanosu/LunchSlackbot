@@ -61,7 +61,12 @@ export async function buildPollBlocks(
     const userVoted = clickingUserId ? hasVoted(place, clickingUserId) : false;
     const buttonIcon = userVoted ? "✅" : "☐";
 
-    // Actions block: toggle button with name + count
+    // Voter text for confirm dialog
+    const voterText = voteCount > 0
+      ? `*${voteCount} vote${voteCount > 1 ? "s" : ""}* — ${voterNames}`
+      : "No votes yet. Be the first!";
+
+    // Actions block: toggle button with name + count + confirm dialog
     blocks.push({
       type: "actions",
       elements: [
@@ -73,17 +78,14 @@ export async function buildPollBlocks(
           },
           value: place,
           action_id: "vote_toggle",
+          confirm: {
+            title: { type: "plain_text", text: `Vote for ${place}?` },
+            text: { type: "mrkdwn", text: voterText },
+            confirm_text: { type: "plain_text", text: "Vote" },
+            deny_text: { type: "plain_text", text: "Cancel" },
+          },
         },
       ],
-    });
-
-    // Section block: voter list
-    blocks.push({
-      type: "section",
-      text: {
-        type: "mrkdwn",
-        text: voteCount > 0 ? `— ${voterNames}` : "(no votes)",
-      },
     });
   }
 
