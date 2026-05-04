@@ -4,6 +4,10 @@ Slack bot for lunch place suggestions and voting.
 
 ## Setup
 
+Full Slack app setup instructions (OAuth scopes, events, interactivity, slash commands): **[docs/lunchbot/README.md](docs/lunchbot/README.md)**
+
+Quick start:
+
 1. Copy `.env.example` to `.env` and fill in your Slack credentials:
    ```
    cp .env.example .env
@@ -23,6 +27,17 @@ Slack bot for lunch place suggestions and voting.
    ```
    npm start
    ```
+
+## Commands
+
+| Command | Slash | Description |
+|---|---|---|
+| `@LunchSlackBot begin` | `/lsb-begin` | Start the lunch poll |
+| `@LunchSlackBot suggest <place>` | `/lsb-suggest` | Add a lunch place |
+| `@LunchSlackBot suggestiondeadline <time>` | `/lsb-deadline` | Set suggestion deadline |
+| `@LunchSlackBot remove <place>` | `/lsb-remove` | Remove a suggestion |
+| `@LunchSlackBot list` | `/lsb-list` | Show today's suggestions |
+| `@LunchSlackBot help` | `/lsb-help` | Show help |
 
 ## Render Deployment
 
