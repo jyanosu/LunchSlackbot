@@ -55,7 +55,7 @@ describe("handleShowpoll", () => {
     (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
-    await handleShowpoll({ say, channelId: "C1" });
+    await handleShowpoll({ say, userId: "U1", channelId: "C1" });
 
     expect(say).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -13,6 +13,7 @@ export interface ShowpollCommandContext {
 
 export default async function handleShowpoll({
   say,
+  userId,
   channelId,
   client,
 }: ShowpollCommandContext) {
@@ -29,7 +30,7 @@ export default async function handleShowpoll({
   }
 
   const deadline = today.deadline || DEFAULT_DEADLINE;
-  const blocks = await buildPollBlocks(today.suggestions, undefined, client);
+  const blocks = await buildPollBlocks(today.suggestions, userId, client);
 
   const message = await (say as any)({
     text: `🗳️ *Voting is open!* Deadline: ${deadline} EST`,
