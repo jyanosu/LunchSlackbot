@@ -1,6 +1,6 @@
 import { parseCommand } from "./parser";
 
-const KNOWN_COMMANDS = new Set([
+export const KNOWN_COMMANDS = new Set([
   "begin",
   "suggest",
   "suggestiondeadline",
@@ -8,6 +8,37 @@ const KNOWN_COMMANDS = new Set([
   "list",
   "help",
 ]);
+
+export interface CommandContext {
+  say: (text: string) => Promise<unknown>;
+  args?: string;
+  userId?: string;
+  channelId?: string;
+}
+
+export async function loadCommandHandlers(): Promise<Record<string, Function>> {
+  const handlers: Record<string, Function> = {};
+
+  handlers.begin = (await import("./commands/begin")).default;
+  handlers.suggest = (await import("./commands/suggest")).default;
+  handlers.suggestiondeadline = (await import("./commands/deadline")).default;
+  handlers.remove = (await import("./commands/remove")).default;
+  handlers.list = (await import("./commands/list")).default;
+  handlers.help = (await import("./commands/help")).default;
+
+  return handlers;
+}
+
+export async function routeCommand(
+  command: string,
+  context: CommandContext
+): Promise<void> {
+  const handlers = await loadCommandHandlers();
+  const handler = handlers[command];
+  if (handler) {
+    await handler(context);
+  }
+}
 
 export async function handleAppMention({
   say,
@@ -33,29 +64,10 @@ export async function handleAppMention({
     return;
   }
 
-  // Route to command handler
-  const handlers: Record<string, Function> = {};
-
-  const importBegin = (await import("./commands/begin")).default;
-  handlers.begin = importBegin;
-
-  const importSuggest = (await import("./commands/suggest")).default;
-  handlers.suggest = importSuggest;
-
-  const importDeadline = (await import("./commands/deadline")).default;
-  handlers.suggestiondeadline = importDeadline;
-
-  const importRemove = (await import("./commands/remove")).default;
-  handlers.remove = importRemove;
-
-  const importList = (await import("./commands/list")).default;
-  handlers.list = importList;
-
-  const importHelp = (await import("./commands/help")).default;
-  handlers.help = importHelp;
-
-  const handler = handlers[command];
-  if (handler) {
-    await handler({ say, args, userId: event?.user, channelId: event?.channel });
-  }
+  await routeCommand(command, {
+    say,
+    args,
+    userId: event?.user,
+    channelId: event?.channel,
+  });
 }

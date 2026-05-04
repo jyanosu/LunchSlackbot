@@ -19,7 +19,7 @@ vi.mock("../confirmations", () => ({
 
 import * as store from "../store";
 import * as confirmations from "../confirmations";
-import handleRemove, { handleConfirmation } from "./remove";
+import handleRemove, { handleConfirmation, handleBlockAction } from "./remove";
 
 beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
@@ -157,5 +157,90 @@ describe("handleConfirmation", () => {
     mockCheck.mockReturnValue({ type: "begin", payload: null });
     await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "YES" }, client: mockClient, ack: mockAck });
     expect(mockPostMessage).toHaveBeenCalled();
+  });
+});
+
+describe("handleBlockAction", () => {
+  const mockAck = vi.fn().mockResolvedValue(undefined);
+  const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
+  const mockClient = { chat: { update: mockUpdate } };
+
+  it("starts round on confirm_begin button click", async () => {
+    mockCheck.mockReturnValue({ type: "begin", payload: null });
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_begin" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockAck).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+    });
+  });
+
+  it("removes place on confirm_remove button click", async () => {
+    mockCheck.mockReturnValue({ type: "remove", payload: "Taco Bell" });
+    mockRemoveSuggestion.mockReturnValue(true);
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_remove" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockRemoveSuggestion).toHaveBeenCalledWith("Taco Bell");
+    expect(mockUpdate).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "✅ Removed *Taco Bell* from today's suggestions.",
+    });
+  });
+
+  it("returns early when userId is missing", async () => {
+    mockCheck.mockReturnValue(undefined);
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_begin" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockAck).toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns early when no pending confirmation exists", async () => {
+    mockCheck.mockReturnValue(undefined);
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_begin" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
