@@ -55,17 +55,34 @@ export async function handleConfirmation({
   event: { user?: string; channel?: string; text?: string; bot?: boolean };
   say: (text: string) => Promise<unknown>;
 }) {
-  // Skip bot messages to avoid self-triggering
-  if (event.bot) return;
+  console.log("[confirmation] message event received", {
+    text: event.text,
+    bot: event.bot,
+    user: event.user,
+    channel: event.channel,
+  });
 
-  if (!event.user || !event.channel) return;
+  // Skip bot messages to avoid self-triggering
+  if (event.bot) {
+    console.log("[confirmation] skipping bot message");
+    return;
+  }
+
+  if (!event.user || !event.channel) {
+    console.log("[confirmation] missing user or channel");
+    return;
+  }
 
   const text = (event.text ?? "").trim().toLowerCase();
-  if (text !== "yes") return;
+  if (text !== "yes") {
+    console.log(`[confirmation] text "${text}" is not "yes", ignoring`);
+    return;
+  }
 
   // Check begin confirmation
   const beginEntry = check(event.user, event.channel, "begin");
   if (beginEntry) {
+    console.log("[confirmation] begin confirmed");
     const today = new Date().toISOString().split("T")[0];
     const { setToday } = await import("../store");
     setToday({
@@ -83,6 +100,7 @@ export async function handleConfirmation({
   // Check remove confirmation
   const removeEntry = check(event.user, event.channel, "remove");
   if (removeEntry) {
+    console.log("[confirmation] remove confirmed");
     const place = removeEntry.payload as string;
     const removed = removeSuggestion(place);
     if (removed) {
@@ -94,4 +112,5 @@ export async function handleConfirmation({
   }
 
   // No pending confirmation — ignore
+  console.log("[confirmation] no pending confirmation for this user/channel");
 }
