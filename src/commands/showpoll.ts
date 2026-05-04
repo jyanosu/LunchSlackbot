@@ -1,4 +1,4 @@
-import { getToday, getSchedule } from "../store";
+import { getToday, getSchedule, getExpandedSuggestions } from "../store";
 import { buildPollBlocks } from "./vote";
 
 const DEFAULT_DEADLINE = "11:45 AM";
@@ -36,7 +36,7 @@ export default async function handleShowpoll({
 
   const schedule = getSchedule();
   const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
-  const blocks = await buildPollBlocks(today.suggestions, userId, client);
+  const blocks = await buildPollBlocks(today.suggestions, userId, client, getExpandedSuggestions());
 
   const message = await (say as any)({
     text: `🗳️ *Voting is open!* Closes at ${endTime}`,

@@ -12,6 +12,7 @@ export interface LunchDay {
   votingStarted?: boolean;
   pollMessageTs?: string;
   pollEnded?: boolean;
+  expandedSuggestions?: string[]; // array for JSON, tracked as Set in-memory
 }
 
 export interface LunchSchedule {
@@ -199,6 +200,38 @@ export function setPollMessageTs(ts: string): void {
   if (!day) return;
 
   day.pollMessageTs = ts;
+  saveStore();
+}
+
+/**
+ * Get the set of suggestions with expanded voter lists.
+ */
+export function getExpandedSuggestions(): Set<string> {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day?.expandedSuggestions) return new Set();
+  return new Set(day.expandedSuggestions);
+}
+
+/**
+ * Toggle a suggestion's expanded state.
+ */
+export function toggleExpandedSuggestion(place: string): void {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day) return;
+
+  if (!day.expandedSuggestions) {
+    day.expandedSuggestions = [];
+  }
+
+  const idx = day.expandedSuggestions.indexOf(place);
+  if (idx >= 0) {
+    day.expandedSuggestions.splice(idx, 1);
+  } else {
+    day.expandedSuggestions.push(place);
+  }
+
   saveStore();
 }
 

@@ -10,6 +10,7 @@ vi.mock("../store", () => ({
   setUserName: vi.fn(),
   getUserNames: vi.fn(),
   getSchedule: vi.fn(),
+  getExpandedSuggestions: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -72,6 +73,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
@@ -116,6 +118,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "9999999.111" });
 
@@ -135,6 +138,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
@@ -157,32 +161,6 @@ describe("handleVote", () => {
     );
   });
 
-  it("includes confirm dialog with voter info on buttons", async () => {
-    const todayDay = {
-      started: true,
-      votingStarted: false,
-      suggestions: ["Taco Bell"],
-      deadline: "11:45 AM",
-    };
-    const votingDay = { ...todayDay, votingStarted: true };
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
-    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
-    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
-
-    await handleVote({ say, userId: "U1", channelId: "C1" });
-
-    const pollMessage = say.mock.calls[1][0] as any;
-    const actionBlock = pollMessage.blocks?.find((b: any) => b.type === "actions");
-    expect(actionBlock).toBeDefined();
-    const button = actionBlock.elements[0];
-    expect(button.confirm).toBeDefined();
-    expect(button.confirm.title.text).toBe("Vote for Taco Bell?");
-    expect(button.confirm.text.text).toBe("No votes yet. Be the first!");
-    expect(button.confirm.confirm_text.text).toBe("Vote");
-  });
-
   it("does not include voter list section block", async () => {
     const todayDay = {
       started: true,
@@ -194,6 +172,7 @@ describe("handleVote", () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
     (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
 
@@ -202,6 +181,54 @@ describe("handleVote", () => {
     const pollMessage = say.mock.calls[1][0] as any;
     const sectionBlocks = pollMessage.blocks?.filter((b: any) => b.type === "section");
     expect(sectionBlocks).toHaveLength(0);
+  });
+
+  it("includes ? button when votes exist", async () => {
+    const todayDay = {
+      started: true,
+      votingStarted: false,
+      suggestions: ["Taco Bell"],
+      deadline: "11:45 AM",
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set(["U1"]));
+    (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
+    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
+
+    await handleVote({ say, userId: "U1", channelId: "C1" });
+
+    const pollMessage = say.mock.calls[1][0] as any;
+    const actionBlock = pollMessage.blocks?.find((b: any) => b.type === "actions");
+    expect(actionBlock.elements.length).toBe(2); // vote toggle + ?
+    expect(actionBlock.elements[1].text.text).toBe("?");
+    expect(actionBlock.elements[1].action_id).toBe("expand_voters");
+  });
+
+  it("shows voter section when suggestion is expanded", async () => {
+    const todayDay = {
+      started: true,
+      votingStarted: false,
+      suggestions: ["Taco Bell"],
+      deadline: "11:45 AM",
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set(["U1"]));
+    (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set(["Taco Bell"]));
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
+    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
+
+    await handleVote({ say, userId: "U1", channelId: "C1" });
+
+    const pollMessage = say.mock.calls[1][0] as any;
+    const sectionBlocks = pollMessage.blocks?.filter((b: any) => b.type === "section");
+    expect(sectionBlocks).toHaveLength(1);
   });
 });
 
@@ -214,6 +241,7 @@ describe("handleVoteToggle", () => {
       deadline: "11:45 AM",
     });
     (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
     (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
     (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
     const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
