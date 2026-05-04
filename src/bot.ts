@@ -21,7 +21,7 @@ const app = new App({
 });
 
 app.event("app_mention", handleAppMention);
-(app.event as any)("message", handleConfirmation);
+app.message(/.*/, handleConfirmation as any);
 
 console.log("✅ Bot listeners registered: app_mention, message");
 
