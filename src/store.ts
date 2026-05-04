@@ -14,14 +14,35 @@ export interface LunchDay {
   pollEnded?: boolean;
 }
 
+export interface LunchSchedule {
+  beginTime: string;    // "HH:MM" 24h, default "09:30"
+  voteTime: string;     // "HH:MM" 24h, default "10:30"
+  endTime: string;      // "HH:MM" 24h, default "11:15"
+  days: string;         // cron day-of-week, default "*" (every day)
+  enabled: boolean;     // default true
+}
+
 export interface LunchStore {
   days: Record<string, LunchDay>;
   votes: Record<string, string[]>;  // "date:place" → userId[]
   userNames: Record<string, string>;  // userId → name
   masterList: string[];  // original case, unique (case-insensitive, array for JSON)
+  schedule: LunchSchedule;
 }
 
-const store: LunchStore = { days: {}, votes: {}, userNames: {}, masterList: [] };
+const store: LunchStore = {
+  days: {},
+  votes: {},
+  userNames: {},
+  masterList: [],
+  schedule: {
+    beginTime: "09:30",
+    voteTime: "10:30",
+    endTime: "11:15",
+    days: "*",
+    enabled: true,
+  },
+};
 
 function ensureDataDir(): void {
   if (!fs.existsSync(DATA_DIR)) {
@@ -45,6 +66,9 @@ export function loadStore(): void {
       }
       if (data && Array.isArray(data.masterList)) {
         store.masterList = data.masterList;
+      }
+      if (data && data.schedule && typeof data.schedule === "object") {
+        Object.assign(store.schedule, data.schedule);
       }
     }
   } catch {
@@ -274,4 +298,126 @@ export function getWinners(): WinnerEntry[] {
 export function addWinner(entry: WinnerEntry): void {
   winnersStore.winners.push(entry);
   saveWinners();
+}
+
+// --- Schedule Config ---
+
+export function getSchedule(): LunchSchedule {
+  return { ...store.schedule };
+}
+
+export function setSchedule(schedule: Partial<LunchSchedule>): void {
+  Object.assign(store.schedule, schedule);
+  saveStore();
+}
+
+// --- Shared Store Functions (used by both handlers and cron) ---
+
+export interface PollResult {
+  winner: { place: string; votes: number };
+  results: Array<{ place: string; votes: number; rank: number }>;
+  isTie: boolean;
+  totalVotes: number;
+}
+
+const DEFAULT_DEADLINE = "11:00 AM EST";
+
+/**
+ * Start today's lunch suggestion round.
+ * Returns the LunchDay if started, undefined if already started.
+ */
+export function startToday(): LunchDay | undefined {
+  const today = store.days[todayKey()];
+  if (today?.started) return undefined;
+
+  const day: LunchDay = {
+    date: todayKey(),
+    suggestions: [],
+    deadline: DEFAULT_DEADLINE,
+    started: true,
+    votingStarted: false,
+  };
+  setToday(day);
+  return day;
+}
+
+/**
+ * Start voting for today.
+ * Returns the LunchDay if started, undefined if already started or no suggestions.
+ */
+export function startVoting(): LunchDay | undefined {
+  const today = store.days[todayKey()];
+  if (!today?.started) return undefined;
+  if (today.votingStarted) return undefined;
+  if (today.suggestions.length === 0) {
+    console.log("[startVoting] no suggestions, skipping");
+    return undefined;
+  }
+
+  today.votingStarted = true;
+  saveStore();
+  return today;
+}
+
+/**
+ * End today's poll: compute winner, save history, mark poll ended.
+ * Returns PollResult if ended, undefined if already ended or voting not started.
+ */
+export function endPoll(): PollResult | undefined {
+  const today = store.days[todayKey()];
+  if (!today?.started) return undefined;
+  if (!today.votingStarted) return undefined;
+  if (today.pollEnded) return undefined;
+
+  // Compute results
+  const results: Array<{ place: string; votes: number }> = today.suggestions.map((place) => ({
+    place,
+    votes: getVotes(place).size,
+  }));
+
+  // Sort: descending by vote count, ascending by name for ties
+  results.sort((a, b) => {
+    if (b.votes !== a.votes) return b.votes - a.votes;
+    return a.place.localeCompare(b.place);
+  });
+
+  // Pick winner
+  const topVotes = results[0].votes;
+  const tiedWinners = results.filter((r) => r.votes === topVotes);
+  const isTie = tiedWinners.length > 1;
+  const winner = isTie
+    ? tiedWinners[Math.floor(Math.random() * tiedWinners.length)]
+    : tiedWinners[0];
+  const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
+
+  // Save winner to history
+  addWinner({
+    date: today.date,
+    place: winner.place,
+    voteCount: winner.votes,
+    totalVotes,
+  });
+
+  // Mark poll as ended
+  setPollEnded();
+
+  // Build ranked results
+  let rank = 1;
+  const rankedResults: Array<{ place: string; votes: number; rank: number }> = [];
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (i > 0 && r.votes === results[i - 1].votes) {
+      // same rank as previous
+    } else {
+      rank = i + 1;
+    }
+    rankedResults.push({ place: r.place, votes: r.votes, rank });
+  }
+
+  return {
+    winner: { place: winner.place, votes: winner.votes },
+    results: rankedResults,
+    isTie,
+    totalVotes,
+  };
 }

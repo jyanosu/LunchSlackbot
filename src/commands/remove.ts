@@ -100,18 +100,15 @@ export async function handleConfirmation({
   const beginEntry = check(event.user, event.channel, "begin");
   if (beginEntry) {
     console.log("[confirmation] begin confirmed");
-    const today = new Date().toISOString().split("T")[0];
-    const { setToday } = await import("../store");
-    setToday({
-      date: today,
-      suggestions: [],
-      deadline: "11:00 AM",
-      started: true,
-    });
-    await client.chat.postMessage({
-      channel: event.channel,
-      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
-    });
+    const { startToday } = await import("../store");
+    const day = startToday();
+    if (day) {
+      const deadline = day.deadline || "11:00 AM EST";
+      await client.chat.postMessage({
+        channel: event.channel,
+        text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: ${deadline}.`,
+      });
+    }
     return;
   }
 
@@ -181,27 +178,25 @@ export async function handleBlockAction({
     const beginEntry = check(userId, channelId, "begin");
     if (beginEntry) {
       console.log("[block_action] begin confirmed");
-      const today = new Date().toISOString().split("T")[0];
-      const { setToday } = await import("../store");
-      setToday({
-        date: today,
-        suggestions: [],
-        deadline: "11:00 AM",
-        started: true,
-      });
-      await client.chat.update({
-        channel: channelId,
-        ts: messageTs,
-        text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
-      });
-      // Post channel announcement (best-effort)
-      try {
-        await client.chat.postMessage({
+      const { startToday } = await import("../store");
+      const day = startToday();
+      if (day) {
+        const deadline = day.deadline || "11:00 AM EST";
+        const announcement = `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: ${deadline}.`;
+        await client.chat.update({
           channel: channelId,
-          text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+          ts: messageTs,
+          text: announcement,
         });
-      } catch {
-        // best-effort, silently ignore
+        // Post channel announcement (best-effort)
+        try {
+          await client.chat.postMessage({
+            channel: channelId,
+            text: announcement,
+          });
+        } catch {
+          // best-effort, silently ignore
+        }
       }
       return;
     }

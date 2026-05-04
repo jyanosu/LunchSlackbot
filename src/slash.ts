@@ -71,4 +71,24 @@ export function registerSlashCommands(app: App) {
     await ack();
     await routeCommand("showhistory", { say, args: "", userId: body.user_id, channelId: body.channel_id });
   });
+
+  app.command("/lsb-schedulebegin", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("schedulebegin", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-schedulevote", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("schedulevote", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-scheduleend", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("scheduleend", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
+
+  app.command("/lsb-schedule", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("schedule", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
 }

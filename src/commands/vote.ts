@@ -117,15 +117,21 @@ export default async function handleVote({
     return;
   }
 
-  // Mark voting as started
-  setVotingStarted(true);
+  // Start voting via shared store function
+  const { startVoting } = await import("../store");
+  const votingDay = startVoting();
+
+  if (!votingDay) {
+    await say("Could not start voting. Suggestions may be empty or voting may have already started.");
+    return;
+  }
 
   // Post channel announcement
   await say("🗳️ Voting is open! Check the poll below and vote using the buttons.");
 
   // Build poll message
-  const deadline = today.deadline || DEFAULT_DEADLINE;
-  const blocks = await buildPollBlocks(today.suggestions, client);
+  const deadline = votingDay.deadline || DEFAULT_DEADLINE;
+  const blocks = await buildPollBlocks(votingDay.suggestions, client);
 
   const message = await (say as any)({
     text: `🗳️ *Voting is open!* Deadline: ${deadline} EST`,

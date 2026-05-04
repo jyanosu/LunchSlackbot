@@ -5,6 +5,7 @@ import { handleConfirmation, handleBlockAction } from "./commands/remove";
 import { handleVoteToggle } from "./commands/vote";
 import { loadStore, loadWinners } from "./store";
 import { registerSlashCommands } from "./slash";
+import { initSchedule, setBoltApp } from "./cron";
 
 const { SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET } = process.env;
 
@@ -37,8 +38,12 @@ loadWinners();
 
 (async () => {
   try {
+    setBoltApp(app);
     await app.start(process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
     console.log("⚡ LunchBot is running!");
+
+    // Initialize scheduled cron jobs after app starts
+    initSchedule(app);
   } catch (error) {
     console.error("Failed to start bot:", error);
     process.exit(1);

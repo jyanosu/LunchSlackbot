@@ -17,6 +17,10 @@ export const KNOWN_COMMANDS = new Set([
   "endpoll",
   "showhistory",
   "history",
+  "schedulebegin",
+  "schedulevote",
+  "scheduleend",
+  "schedule",
 ]);
 
 export interface CommandContext {
@@ -45,6 +49,10 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.endpoll = (await import("./commands/endpoll")).default;
   handlers.showhistory = (await import("./commands/showhistory")).default;
   handlers.history = handlers.showhistory; // alias
+  handlers.schedulebegin = (await import("./commands/schedulebegin")).default;
+  handlers.schedulevote = (await import("./commands/schedulevote")).default;
+  handlers.scheduleend = (await import("./commands/scheduleend")).default;
+  handlers.schedule = (await import("./commands/showschedule")).default;
 
   return handlers;
 }

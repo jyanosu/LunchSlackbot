@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let mockGetToday: ReturnType<typeof vi.fn>;
 let mockRemoveSuggestion: ReturnType<typeof vi.fn>;
-let mockSetToday: ReturnType<typeof vi.fn>;
+let mockStartToday: ReturnType<typeof vi.fn>;
 let mockResetStore: ReturnType<typeof vi.fn>;
 let mockAdd: ReturnType<typeof vi.fn>;
 let mockCheck: ReturnType<typeof vi.fn>;
@@ -10,7 +10,7 @@ let mockCheck: ReturnType<typeof vi.fn>;
 vi.mock("../store", () => ({
   getToday: vi.fn(),
   removeSuggestion: vi.fn(),
-  setToday: vi.fn(),
+  startToday: vi.fn(),
   resetStore: vi.fn(),
 }));
 
@@ -26,7 +26,7 @@ import handleRemove, { handleConfirmation, handleBlockAction } from "./remove";
 beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
   mockRemoveSuggestion = store.removeSuggestion as ReturnType<typeof vi.fn>;
-  mockSetToday = store.setToday as ReturnType<typeof vi.fn>;
+  mockStartToday = store.startToday as ReturnType<typeof vi.fn>;
   mockResetStore = store.resetStore as ReturnType<typeof vi.fn>;
   mockAdd = confirmations.add as ReturnType<typeof vi.fn>;
   mockCheck = confirmations.check as ReturnType<typeof vi.fn>;
@@ -131,6 +131,7 @@ describe("handleConfirmation", () => {
   });
 
   it("starts round on begin confirmation", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
     await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
 
@@ -157,6 +158,7 @@ describe("handleConfirmation", () => {
   });
 
   it("handles case-insensitive yes", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
     await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "YES" }, client: mockClient, ack: mockAck });
     expect(mockPostMessage).toHaveBeenCalled();
@@ -170,6 +172,7 @@ describe("handleBlockAction", () => {
   const mockClient = { chat: { update: mockUpdate, postMessage: mockPostMessage } };
 
   it("starts round on confirm_begin button click", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
 
     await handleBlockAction({

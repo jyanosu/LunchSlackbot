@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
-  getVotes: vi.fn(),
-  setPollEnded: vi.fn(),
-  addWinner: vi.fn(),
+  endPoll: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -61,131 +59,62 @@ describe("handleEndpoll", () => {
     expect(say).toHaveBeenCalledWith("Poll has already ended for today.");
   });
 
-  it("computes winner correctly (highest votes)", async () => {
+  it("posts final announcement with winner", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1", "U2", "U3"]);
-      if (place === "Chipotle") return new Set(["U1"]);
-      return new Set(["U2"]);
-    });
-    const say = vi.fn().mockResolvedValue(undefined);
-
-    await handleEndpoll({ say });
-
-    expect(store.addWinner).toHaveBeenCalledWith({
-      date: "2025-01-15",
-      place: "Taco Bell",
-      voteCount: 3,
-      totalVotes: 5,
-    });
-    expect(store.setPollEnded).toHaveBeenCalled();
-    expect(say).toHaveBeenCalledWith(expect.stringContaining("🏆 *Taco Bell*"));
-  });
-
-  it("picks random winner on tie", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1", "U2"]);
-      if (place === "Chipotle") return new Set(["U1", "U3"]);
-      return new Set();
-    });
-    const say = vi.fn().mockResolvedValue(undefined);
-
-    await handleEndpoll({ say });
-
-    // Winner is one of the tied places
-    const winnerCall = (store.addWinner as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(["Chipotle", "Taco Bell"]).toContain(winnerCall.place);
-    expect(winnerCall.voteCount).toBe(2);
-    expect(say).toHaveBeenCalledWith(expect.stringContaining("(tiebreaker: random)"));
-  });
-
-  it("posts final announcement with ordered results", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1", "U2", "U3"]);
-      if (place === "Chipotle") return new Set(["U1", "U2"]);
-      return new Set(["U1"]);
+    (store.endPoll as ReturnType<typeof vi.fn>).mockReturnValue({
+      winner: { place: "Taco Bell", votes: 3 },
+      results: [
+        { place: "Taco Bell", votes: 3, rank: 1 },
+        { place: "Chipotle", votes: 2, rank: 2 },
+        { place: "Panda Express", votes: 1, rank: 3 },
+      ],
+      isTie: false,
+      totalVotes: 6,
     });
     const say = vi.fn().mockResolvedValue(undefined);
 
     await handleEndpoll({ say });
 
     const announcement = say.mock.calls[0][0];
+    expect(announcement).toContain("🏆 *Taco Bell* — 3 votes");
     expect(announcement).toContain("1. 🏆 Taco Bell — 3 votes");
     expect(announcement).toContain("2. Chipotle — 2 votes");
     expect(announcement).toContain("3. Panda Express — 1 vote");
+    expect(announcement).not.toContain("tiebreaker");
   });
 
-  it("all suggestions appear in results (even with 0 votes)", async () => {
+  it("shows tiebreaker note on tie", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
-    const say = vi.fn().mockResolvedValue(undefined);
-
-    await handleEndpoll({ say });
-
-    const announcement = say.mock.calls[0][0];
-    expect(announcement).toContain("Taco Bell");
-    expect(announcement).toContain("Chipotle");
-    expect(announcement).toContain("Panda Express");
-  });
-
-  it("tie shows same rank number", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1"]);
-      if (place === "Chipotle") return new Set(["U2"]);
-      return new Set();
+    (store.endPoll as ReturnType<typeof vi.fn>).mockReturnValue({
+      winner: { place: "Chipotle", votes: 2 },
+      results: [
+        { place: "Chipotle", votes: 2, rank: 1 },
+        { place: "Taco Bell", votes: 2, rank: 1 },
+        { place: "Panda Express", votes: 0, rank: 3 },
+      ],
+      isTie: true,
+      totalVotes: 4,
     });
     const say = vi.fn().mockResolvedValue(undefined);
 
     await handleEndpoll({ say });
 
     const announcement = say.mock.calls[0][0];
-    // Both tied places show rank 1 (sorted alphabetically: Chipotle first)
-    expect(announcement).toContain("Chipotle — 1 vote");
-    expect(announcement).toContain("Taco Bell — 1 vote");
-    expect(announcement).toContain("Panda Express — 0 votes");
-    // One of the tied places has the trophy
-    const chipotleLine = announcement.split("\n").find((l: string) => l.includes("Chipotle"));
-    const tacoLine = announcement.split("\n").find((l: string) => l.includes("Taco Bell"));
-    const trophyCount = (chipotleLine?.includes("🏆") ? 1 : 0) + (tacoLine?.includes("🏆") ? 1 : 0);
-    expect(trophyCount).toBe(1);
-  });
-
-  it("saves winner to history", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1"]);
-      return new Set();
-    });
-    const say = vi.fn().mockResolvedValue(undefined);
-
-    await handleEndpoll({ say });
-
-    expect(store.addWinner).toHaveBeenCalledWith({
-      date: "2025-01-15",
-      place: "Taco Bell",
-      voteCount: 1,
-      totalVotes: 1,
-    });
-  });
-
-  it("marks poll as ended", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
-    const say = vi.fn().mockResolvedValue(undefined);
-
-    await handleEndpoll({ say });
-
-    expect(store.setPollEnded).toHaveBeenCalled();
+    expect(announcement).toContain("(tiebreaker: random)");
+    expect(announcement).toContain("Chipotle — 2 votes");
+    expect(announcement).toContain("Taco Bell — 2 votes");
   });
 
   it("uses singular 'vote' when count is 1", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockImplementation((place: string) => {
-      if (place === "Taco Bell") return new Set(["U1"]);
-      return new Set();
+    (store.endPoll as ReturnType<typeof vi.fn>).mockReturnValue({
+      winner: { place: "Taco Bell", votes: 1 },
+      results: [
+        { place: "Taco Bell", votes: 1, rank: 1 },
+        { place: "Chipotle", votes: 0, rank: 2 },
+      ],
+      isTie: false,
+      totalVotes: 1,
     });
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -196,37 +125,35 @@ describe("handleEndpoll", () => {
     expect(announcement).not.toContain("1 votes");
   });
 
-  it("picks random winner when all places tied at 0 votes", async () => {
+  it("all suggestions appear in results (even with 0 votes)", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
-    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.endPoll as ReturnType<typeof vi.fn>).mockReturnValue({
+      winner: { place: "Chipotle", votes: 0 },
+      results: [
+        { place: "Chipotle", votes: 0, rank: 1 },
+        { place: "Panda Express", votes: 0, rank: 1 },
+        { place: "Taco Bell", votes: 0, rank: 1 },
+      ],
+      isTie: true,
+      totalVotes: 0,
+    });
     const say = vi.fn().mockResolvedValue(undefined);
 
     await handleEndpoll({ say });
 
-    const winnerCall = (store.addWinner as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(["Chipotle", "Panda Express", "Taco Bell"]).toContain(winnerCall.place);
-    expect(winnerCall.voteCount).toBe(0);
-    expect(winnerCall.totalVotes).toBe(0);
-    expect(say).toHaveBeenCalledWith(expect.stringContaining("(tiebreaker: random)"));
+    const announcement = say.mock.calls[0][0];
+    expect(announcement).toContain("Taco Bell");
+    expect(announcement).toContain("Chipotle");
+    expect(announcement).toContain("Panda Express");
   });
 
-  it("handles single suggestion", async () => {
-    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
-      ...todayDay,
-      suggestions: ["Taco Bell"],
-    });
-    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set(["U1", "U2"]));
+  it("handles endPoll returning undefined", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.endPoll as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
     const say = vi.fn().mockResolvedValue(undefined);
 
     await handleEndpoll({ say });
 
-    expect(store.addWinner).toHaveBeenCalledWith({
-      date: "2025-01-15",
-      place: "Taco Bell",
-      voteCount: 2,
-      totalVotes: 2,
-    });
-    const announcement = say.mock.calls[0][0];
-    expect(announcement).not.toContain("tiebreaker");
+    expect(say).toHaveBeenCalledWith("Could not end poll. Poll may have already ended.");
   });
 });

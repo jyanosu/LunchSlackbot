@@ -15,7 +15,10 @@ function cleanup() {
 }
 
 describe("store", () => {
-  beforeEach(cleanup);
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
   afterEach(cleanup);
 
   it("starts with empty state when data file missing", async () => {
@@ -397,5 +400,202 @@ describe("store adminreset", () => {
 
     expect(getWinners()).toHaveLength(1);
     expect(getWinners()[0].place).toBe("Taco Bell");
+  });
+});
+
+describe("shared store functions", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
+  afterEach(cleanup);
+
+  it("startToday creates LunchDay with correct defaults", async () => {
+    const { loadStore, startToday, getToday } = await import("./store");
+    loadStore();
+
+    const day = startToday();
+
+    expect(day).toBeDefined();
+    expect(day!.started).toBe(true);
+    expect(day!.votingStarted).toBe(false);
+    expect(day!.deadline).toBe("11:00 AM EST");
+    expect(day!.suggestions).toEqual([]);
+    expect(getToday()).toBe(day);
+  });
+
+  it("startToday returns undefined when already started", async () => {
+    const { loadStore, startToday } = await import("./store");
+    loadStore();
+
+    startToday();
+    const result = startToday();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("startVoting returns LunchDay when suggestions exist", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    const day = startVoting();
+
+    expect(day).toBeDefined();
+    expect(day!.votingStarted).toBe(true);
+  });
+
+  it("startVoting returns undefined when already started", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    startVoting();
+    const result = startVoting();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("startVoting returns undefined when no suggestions", async () => {
+    const { loadStore, startToday, startVoting } = await import("./store");
+    loadStore();
+
+    startToday();
+    const result = startVoting();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("startVoting returns undefined when no round started", async () => {
+    const { loadStore, startVoting } = await import("./store");
+    loadStore();
+
+    const result = startVoting();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("endPoll returns PollResult with correct shape", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, toggleVote, endPoll } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    addSuggestion("Chipotle");
+    toggleVote("Taco Bell", "U1");
+    toggleVote("Taco Bell", "U2");
+    toggleVote("Chipotle", "U1");
+    startVoting();
+
+    const result = endPoll();
+
+    expect(result).toBeDefined();
+    expect(result!.winner.place).toBe("Taco Bell");
+    expect(result!.winner.votes).toBe(2);
+    expect(result!.results).toHaveLength(2);
+    expect(result!.results[0].place).toBe("Taco Bell");
+    expect(result!.results[0].rank).toBe(1);
+    expect(result!.results[1].place).toBe("Chipotle");
+    expect(result!.results[1].rank).toBe(2);
+    expect(result!.isTie).toBe(false);
+    expect(result!.totalVotes).toBe(3);
+  });
+
+  it("endPoll returns undefined when already ended", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, endPoll } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    startVoting();
+    endPoll();
+
+    const result = endPoll();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("endPoll returns undefined when voting not started", async () => {
+    const { loadStore, startToday, addSuggestion, endPoll } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+
+    const result = endPoll();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("endPoll returns undefined when no round started", async () => {
+    const { loadStore, endPoll } = await import("./store");
+    loadStore();
+
+    const result = endPoll();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("endPoll handles tie with random winner", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, toggleVote, endPoll } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    addSuggestion("Chipotle");
+    toggleVote("Taco Bell", "U1");
+    toggleVote("Chipotle", "U2");
+    startVoting();
+
+    const result = endPoll();
+
+    expect(result).toBeDefined();
+    expect(["Taco Bell", "Chipotle"]).toContain(result!.winner.place);
+    expect(result!.isTie).toBe(true);
+    expect(result!.results[0].rank).toBe(1);
+    expect(result!.results[1].rank).toBe(1);
+  });
+});
+
+describe("schedule config", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    cleanup();
+  });
+  afterEach(cleanup);
+
+  it("getSchedule returns defaults", async () => {
+    const { loadStore, getSchedule } = await import("./store");
+    loadStore();
+
+    const schedule = getSchedule();
+
+    expect(schedule.beginTime).toBe("09:30");
+    expect(schedule.voteTime).toBe("10:30");
+    expect(schedule.endTime).toBe("11:15");
+    expect(schedule.days).toBe("*");
+    expect(schedule.enabled).toBe(true);
+  });
+
+  it("setSchedule updates config", async () => {
+    const { loadStore, setSchedule, getSchedule } = await import("./store");
+    loadStore();
+
+    setSchedule({ beginTime: "10:00" });
+
+    const schedule = getSchedule();
+    expect(schedule.beginTime).toBe("10:00");
+    expect(schedule.voteTime).toBe("10:30"); // unchanged
+  });
+
+  it("setSchedule can toggle enabled", async () => {
+    const { loadStore, setSchedule, getSchedule } = await import("./store");
+    loadStore();
+
+    setSchedule({ enabled: false });
+
+    expect(getSchedule().enabled).toBe(false);
   });
 });
