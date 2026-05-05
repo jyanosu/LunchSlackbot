@@ -77,7 +77,7 @@ export function loadStore(): void {
   }
 }
 
-function saveStore(): void {
+export function saveStore(): void {
   try {
     ensureDataDir();
     fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");

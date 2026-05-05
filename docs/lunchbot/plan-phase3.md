@@ -92,7 +92,7 @@ npm run build
 - Push to GitHub, verify Render deploys.
 - In [api.slack.com/apps](https://api.slack.com/apps) → **Slash Commands**:
   - Add `/lsb-begin`, `/lsb-suggest`, `/lsb-deadline`, `/lsb-remove`, `/lsb-list`, `/lsb-help`
-  - Request URL for each: `https://lunchslackbot.onrender.com/slack/commands`
+  - Request URL for each: `https://lunchslackbot.onrender.com/slack/events`
   - Add short descriptions
 - **Reinstall** app to workspace.
 - Manual test: verify each slash command in Slack.

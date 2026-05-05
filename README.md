@@ -4,7 +4,7 @@ Slack bot for lunch place suggestions and voting.
 
 ## Setup
 
-Full Slack app setup instructions (OAuth scopes, events, interactivity, slash commands): **[docs/lunchbot/README.md](docs/lunchbot/README.md)**
+Full Slack app setup instructions: **[docs/lunchbot/README.md](docs/lunchbot/README.md)**
 
 Quick start:
 
@@ -28,6 +28,23 @@ Quick start:
    npm start
    ```
 
+### Installing Slash Commands
+
+Slash commands must be registered in your Slack app dashboard. Two options:
+
+**Option A — JSON Manifest (recommended):**
+1. Open your Slack app at [api.slack.com/apps](https://api.slack.com/apps)
+2. Go to **Settings** → **App JSON Manifest**
+3. Copy the `slash_commands` array from [`docs/lunchbot/slash-commands-manifest.json`](docs/lunchbot/slash-commands-manifest.json)
+4. Paste it into the manifest's `slash_commands` field
+5. Set each command's **Request URL** to: `https://your-app-name.onrender.com/slack/events`
+
+**Option B — Manual:**
+1. Go to **Slash Commands** in your Slack app dashboard
+2. Click **Create New Command** for each `/lsb-*` command
+3. Set **Request URL** to: `https://your-app-name.onrender.com/slack/events`
+4. After adding commands, **reinstall** the app to your workspace
+
 ## Commands
 
 | Command | Slash | Description |
@@ -39,8 +56,16 @@ Quick start:
 | `@LunchSlackBot list` | `/lsb-list` | Show today's suggestions |
 | `@LunchSlackBot vote` | `/lsb-vote` | Start voting on suggestions |
 | `@LunchSlackBot showpoll` | `/lsb-showpoll` | Show the current poll |
-| `@LunchSlackBot showmasterlist` | `/lsb-showmasterlist` | Show the master suggestion list |
+| `@LunchSlackBot endpoll` | `/lsb-endpoll` | End voting, announce winner |
+| `@LunchSlackBot history` | `/lsb-showhistory` | Show past winners |
+| `@LunchSlackBot showmasterlist` | `/lsb-showmasterlist` | Show master suggestion list |
 | `@LunchSlackBot removefrommasterlist <place>` | `/lsb-removefrommasterlist` | Remove from master list |
+| `@LunchSlackBot seedmasterlist` | `/lsb-seedmasterlist` | Seed master list with 20 places |
+| `@LunchSlackBot suggestfrommasterlist [n]` | `/lsb-suggestfrommasterlist` | Suggest N random places from master list |
+| `@LunchSlackBot schedulebegin <time>` | `/lsb-schedulebegin` | Set scheduled begin time |
+| `@LunchSlackBot schedulevote <time>` | `/lsb-schedulevote` | Set scheduled vote time |
+| `@LunchSlackBot scheduleend <time>` | `/lsb-scheduleend` | Set scheduled end time |
+| `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
 
 ## Render Deployment

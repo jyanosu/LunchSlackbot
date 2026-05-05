@@ -46,7 +46,7 @@ https://lunchslackbot.onrender.com/slack/events
 
 1. Go to **Settings → App JSON Manifest**
 2. Paste the `slash_commands` entries into the manifest
-3. Or add each command manually in **Slash Commands** with Request URL: `https://lunchslackbot.onrender.com/slack/commands`
+3. Or add each command manually in **Slash Commands** with Request URL: `https://lunchslackbot.onrender.com/slack/events`
 
 ### 6. Install
 

@@ -2,85 +2,85 @@
   "slash_commands": [
     {
       "command": "/lsb-begin",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Start lunch poll",
       "usage_hint": ""
     },
     {
       "command": "/lsb-suggest",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Add a lunch place",
       "usage_hint": "<place>"
     },
     {
       "command": "/lsb-deadline",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Set suggestion deadline",
       "usage_hint": "<time>"
     },
     {
       "command": "/lsb-remove",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Remove a suggestion",
       "usage_hint": "<place>"
     },
     {
       "command": "/lsb-list",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Show today's suggestions",
       "usage_hint": ""
     },
     {
       "command": "/lsb-vote",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Start voting on suggestions",
       "usage_hint": ""
     },
     {
       "command": "/lsb-showpoll",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Show the current poll",
       "usage_hint": ""
     },
     {
       "command": "/lsb-showmasterlist",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Show the master suggestion list",
       "usage_hint": ""
     },
     {
       "command": "/lsb-removefrommasterlist",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Remove a place from the master list",
       "usage_hint": "<place>"
     },
     {
       "command": "/lsb-help",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Show help",
       "usage_hint": ""
     },
     {
       "command": "/lsb-seedmasterlist",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Seed the master list with predefined places",
       "usage_hint": ""
     },
     {
       "command": "/lsb-suggestfrommasterlist",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Suggest random places from the master list",
       "usage_hint": "[count]"
     },
     {
       "command": "/lsb-endpoll",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "End voting and announce the winner",
       "usage_hint": ""
     },
     {
       "command": "/lsb-showhistory",
-      "url": "https://lunchslackbot.onrender.com/slack/commands",
+      "url": "https://lunchslackbot.onrender.com/slack/events",
       "description": "Show past lunch winners",
       "usage_hint": ""
     }

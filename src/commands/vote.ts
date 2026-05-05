@@ -1,4 +1,4 @@
-import { getToday, getVotes, hasVoted, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule, getExpandedSuggestions } from "../store";
+import { getToday, getVotes, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule, getExpandedSuggestions } from "../store";
 
 const DEFAULT_DEADLINE = "11:45 AM";
 
@@ -58,17 +58,13 @@ export async function buildPollBlocks(
       .map((uid) => userNames.get(uid) ?? uid)
       .join(", ");
 
-    // Check if clicking user voted for this place
-    const userVoted = clickingUserId ? hasVoted(place, clickingUserId) : false;
-    const buttonIcon = userVoted ? "✅" : "☐";
-
     // Actions block: toggle button + optional ? button
     const elements: Record<string, unknown>[] = [
       {
         type: "button",
         text: {
           type: "plain_text",
-          text: `${buttonIcon} ${place} (${voteCount})`,
+          text: `${place} (${voteCount})`,
         },
         value: place,
         action_id: "vote_toggle",

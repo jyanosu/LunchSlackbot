@@ -4,7 +4,7 @@ import { handleAppMention } from "./handlers";
 import { handleConfirmation, handleBlockAction } from "./commands/remove";
 import { handleVoteToggle } from "./commands/vote";
 import { handleExpandVoters } from "./commands/expandvoters";
-import { loadStore, loadWinners } from "./store";
+import { loadStore, loadWinners, saveStore } from "./store";
 import { registerSlashCommands } from "./slash";
 import { initSchedule, setBoltApp } from "./cron";
 
@@ -37,6 +37,18 @@ console.log("✅ Bot listeners registered: app_mention, message, slash commands"
 // Seed store from data/lunch.json if it exists
 loadStore();
 loadWinners();
+
+// Graceful shutdown: save store before exiting
+process.on("SIGTERM", () => {
+  console.log("SIGTERM received, saving store...");
+  saveStore();
+  process.exit(0);
+});
+process.on("SIGINT", () => {
+  console.log("SIGINT received, saving store...");
+  saveStore();
+  process.exit(0);
+});
 
 (async () => {
   try {

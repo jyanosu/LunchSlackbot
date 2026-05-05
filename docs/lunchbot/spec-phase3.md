@@ -75,8 +75,8 @@ help (/lsb-help) - show this message
 ### Slack App configuration
 
 In [api.slack.com/apps](https://api.slack.com/apps) → **Slash Commands**:
-- Add each command with Request URL: `https://lunchslackbot.onrender.com/slack/commands`
-- Bolt handles the `/slack/commands` endpoint automatically when `app.command()` is used
+- Add each command with Request URL: `https://lunchslackbot.onrender.com/slack/events`
+- Bolt handles the `/slack/events` endpoint automatically when `app.command()` is used
 - Required scope: `chat:write` (already added in Phase 2 for button confirmations)
 - After adding, **reinstall** the app to apply
 
