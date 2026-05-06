@@ -22,6 +22,16 @@ if (!SLACK_SIGNING_SECRET) {
 const app = new App({
   token: SLACK_BOT_TOKEN,
   signingSecret: SLACK_SIGNING_SECRET,
+  customRoutes: [
+    {
+      path: "/health",
+      method: ["GET"],
+      handler: (_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("ok");
+      },
+    },
+  ],
 });
 
 app.event("app_mention", handleAppMention);

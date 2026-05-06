@@ -25,7 +25,7 @@ Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** �
 **Event Subscriptions** → Enable → set **Request URL** to:
 
 ```
-https://lunchslackbot.onrender.com/slack/events
+https://<your-server>/slack/events
 ```
 
 **Bot Event Subscriptions** → Add:
@@ -37,7 +37,7 @@ https://lunchslackbot.onrender.com/slack/events
 **Interactivity & Shortcuts** → Enable → set **Request URL** to:
 
 ```
-https://lunchslackbot.onrender.com/slack/events
+https://<your-server>/slack/events
 ```
 
 ### 5. Slash Commands
@@ -46,23 +46,32 @@ https://lunchslackbot.onrender.com/slack/events
 
 1. Go to **Settings → App JSON Manifest**
 2. Paste the `slash_commands` entries into the manifest
-3. Or add each command manually in **Slash Commands** with Request URL: `https://lunchslackbot.onrender.com/slack/events`
+3. Or add each command manually in **Slash Commands** with Request URL: `https://<your-server>/slack/events`
 
 ### 6. Install
 
 **Install to Workspace** → Authorize. If you changed settings after installing, **reinstall** the app.
 
-## Deploy to Render
+## Deployment
 
-1. Connect your GitHub repo to [Render](https://render.com)
-2. Create a **Web Service** with these settings:
-   - **Build Command**: `npm run build`
-   - **Start Command**: `node dist/bot.js`
-   - **Environment**: Node 20 LTS
-3. Set environment variables:
-   - `SLACK_BOT_TOKEN` — from your Slack app (OAuth Token)
-   - `SLACK_SIGNING_SECRET` — from your Slack app (Basic Information)
-4. Deploy
+The bot listens on port `$PORT` (default 3000). Set the **Request URL** in your Slack app to:
+
+```
+https://<your-server>/slack/events
+```
+
+### Docker
+
+```bash
+docker compose up -d
+```
+
+### Bare metal
+
+```bash
+npm install && npm run build
+PORT=3000 node dist/bot.js
+```
 
 ## Commands
 

@@ -37,12 +37,12 @@ Slash commands must be registered in your Slack app dashboard. Two options:
 2. Go to **Settings** → **App JSON Manifest**
 3. Copy the `slash_commands` array from [`docs/lunchbot/slash-commands-manifest.json`](docs/lunchbot/slash-commands-manifest.json)
 4. Paste it into the manifest's `slash_commands` field
-5. Set each command's **Request URL** to: `https://your-app-name.onrender.com/slack/events`
+5. Set each command's **Request URL** to: `https://<your-server>/slack/events`
 
 **Option B — Manual:**
 1. Go to **Slash Commands** in your Slack app dashboard
 2. Click **Create New Command** for each `/lsb-*` command
-3. Set **Request URL** to: `https://your-app-name.onrender.com/slack/events`
+3. Set **Request URL** to: `https://<your-server>/slack/events`
 4. After adding commands, **reinstall** the app to your workspace
 
 ## Commands
@@ -68,19 +68,27 @@ Slash commands must be registered in your Slack app dashboard. Two options:
 | `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
 
-## Render Deployment
+## Docker Deployment
 
-1. Push this repo to GitHub.
-2. On [Render](https://render.com), create a **Web Service** from your repo.
-3. Set these environment variables in the Render dashboard:
-   - `SLACK_BOT_TOKEN`
-   - `SLACK_SIGNING_SECRET`
-4. Deploy settings:
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `node dist/bot.js`
-   - (or use the `Procfile` — Render detects it automatically)
-5. In your Slack App settings, set **Request URL** to:
-   `https://your-app-name.onrender.com/slack/events`
+1. Copy `.env.example` to `.env` and fill in your Slack credentials.
+   - `LUNCH_CHANNEL_ID` is required for automated scheduling (set to your Slack channel ID).
+2. From the project root, build and run:
+   ```
+   docker compose up -d
+   ```
+3. Override port: `PORT=8080 docker compose up -d`
+4. Data persists in `./data/` volume mount (must run from project root).
+5. Health check: `GET /health` (returns `ok` on port `$PORT`)
+
+### Bare Metal
+
+```bash
+npm install && npm run build
+PORT=3000 node dist/bot.js
+```
+
+In your Slack App settings, set **Request URL** to:
+`https://<your-server>/slack/events`
 
 ## Scripts
 

@@ -15,3 +15,4 @@ Phase specs are in separate files:
 | Phase 10 — Automated Scheduling | [spec-phase10.md](./spec-phase10.md) | [plan-phase10.md](./plan-phase10.md) |
 | Phase 11 — Deadline Reminders | [spec-phase11.md](./spec-phase11.md) | [plan-phase11.md](./plan-phase11.md) |
 | Phase 12 — Hide Voter List, Show on Hover | [spec-phase12.md](./spec-phase12.md) | [plan-phase12.md](./plan-phase12.md) |
+| Phase 13 — Docker Containerization | [spec-phase13.md](./spec-phase13.md) | [plan-phase13.md](./plan-phase13.md) |
