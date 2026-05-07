@@ -1,4 +1,4 @@
-import { getToday, addSuggestion, getMasterList } from "../store";
+import { getToday, addSuggestion, getMasterList, getPickCounts } from "../store";
 
 export default async function handleSuggestFromMasterlist({
   say,
@@ -40,9 +40,17 @@ export default async function handleSuggestFromMasterlist({
   // Clamp to available
   count = Math.min(count, places.length);
 
-  // Shuffle and pick
-  const shuffled = places.sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, count);
+  // Get pick counts from past 4 weeks
+  const pickCounts = getPickCounts(28);
+
+  // Sort by pick count ascending (least picked first), shuffle ties
+  const sorted = places.sort((a, b) => {
+    const countA = pickCounts.get(a) ?? 0;
+    const countB = pickCounts.get(b) ?? 0;
+    if (countA !== countB) return countA - countB;
+    return Math.random() - 0.5; // shuffle ties
+  });
+  const selected = sorted.slice(0, count);
 
   // Add each to today's suggestions (skip duplicates)
   const added: string[] = [];

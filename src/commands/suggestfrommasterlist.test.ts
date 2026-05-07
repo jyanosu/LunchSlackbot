@@ -4,6 +4,7 @@ vi.mock("../store", () => ({
   getToday: vi.fn(),
   addSuggestion: vi.fn(),
   getMasterList: vi.fn(),
+  getPickCounts: vi.fn(),
 }));
 
 import * as store from "../store";
@@ -24,6 +25,7 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -45,6 +47,7 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -66,6 +69,7 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -87,6 +91,7 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -105,6 +110,7 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -176,6 +182,8 @@ describe("handleSuggestFromMasterlist", () => {
       started: true,
     });
     (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
 
     const say = vi.fn().mockResolvedValue(undefined);
 
@@ -184,5 +192,54 @@ describe("handleSuggestFromMasterlist", () => {
     expect(say).toHaveBeenCalledWith(
       expect.stringContaining("Current suggestions:")
     );
+  });
+
+  it("prioritizes least-picked places", async () => {
+    const places = ["taco bell", "chipotle", "in-n-out", "panda express", "subway"];
+    (store.getMasterList as ReturnType<typeof vi.fn>).mockReturnValue(new Set(places));
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      date: "2025-01-15",
+      suggestions: [],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
+    // taco bell picked 5 times, chipotle 3, in-n-out 0, panda express 0, subway 1
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map([
+      ["taco bell", 5],
+      ["chipotle", 3],
+      ["subway", 1],
+    ]));
+
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleSuggestFromMasterlist({ say, args: "2" });
+
+    // Should pick in-n-out and panda express (both 0 picks)
+    const calls = (store.addSuggestion as ReturnType<typeof vi.fn>).mock.calls;
+    const picked = calls.map((c: any[]) => c[0]);
+    expect(picked).toContain("in-n-out");
+    expect(picked).toContain("panda express");
+  });
+
+  it("treats empty history as random", async () => {
+    const places = ["taco bell", "chipotle", "in-n-out"];
+    (store.getMasterList as ReturnType<typeof vi.fn>).mockReturnValue(new Set(places));
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      date: "2025-01-15",
+      suggestions: [],
+      deadline: "11:00 AM",
+      started: true,
+    });
+    (store.addSuggestion as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
+    (store.getPickCounts as ReturnType<typeof vi.fn>).mockReturnValue(new Map());
+
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleSuggestFromMasterlist({ say });
+
+    expect(store.addSuggestion).toHaveBeenCalled();
   });
 });

@@ -39,4 +39,45 @@ describe("handleShowHistory", () => {
       "📋 *Lunch History*\n\nNo winners yet. End a poll with @LunchSlackBot endpoll to start tracking."
     );
   });
+
+  it("displays runners-up indented below winner", async () => {
+    (store.getWinners as ReturnType<typeof vi.fn>).mockReturnValue([
+      {
+        date: "2025-01-15",
+        place: "Taco Bell",
+        voteCount: 5,
+        totalVotes: 12,
+        runnersUp: [
+          { place: "Chipotle", votes: 3 },
+          { place: "Panda Express", votes: 1 },
+        ],
+      },
+    ]);
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleShowHistory({ say });
+
+    const output = say.mock.calls[0][0];
+    expect(output).toContain("🏆 Taco Bell (5 votes)");
+    expect(output).toContain("  Chipotle — 3 votes");
+    expect(output).toContain("  Panda Express — 1 vote");
+  });
+
+  it("handles entries without runners-up (backward compat)", async () => {
+    (store.getWinners as ReturnType<typeof vi.fn>).mockReturnValue([
+      {
+        date: "2025-01-15",
+        place: "Taco Bell",
+        voteCount: 5,
+        totalVotes: 12,
+      },
+    ]);
+    const say = vi.fn().mockResolvedValue(undefined);
+
+    await handleShowHistory({ say });
+
+    const output = say.mock.calls[0][0];
+    expect(output).toContain("🏆 Taco Bell (5 votes)");
+    expect(output).not.toContain("  ");
+  });
 });

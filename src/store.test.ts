@@ -492,11 +492,12 @@ describe("shared store functions", () => {
     expect(result).toBeUndefined();
   });
 
-  it("startVoting returns undefined when no suggestions", async () => {
-    const { loadStore, startToday, startVoting } = await import("./store");
+  it("startVoting returns undefined when no suggestions and master list empty", async () => {
+    const { loadStore, startToday, startVoting, getMasterList } = await import("./store");
     loadStore();
 
     startToday();
+    // Master list is empty after loadStore, so auto-pick has nothing to pick
     const result = startVoting();
 
     expect(result).toBeUndefined();
@@ -509,6 +510,59 @@ describe("shared store functions", () => {
     const result = startVoting();
 
     expect(result).toBeUndefined();
+  });
+
+  it("startVoting auto-picks from master list when suggestions empty", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, getMasterList, setMasterList } = await import("./store");
+    loadStore();
+
+    setMasterList(new Set(["Taco Bell", "Chipotle", "In-N-Out", "Panda Express", "Subway", "Qdoba"]));
+    startToday();
+    const result = startVoting();
+
+    expect(result).toBeDefined();
+    expect(result!.votingStarted).toBe(true);
+    expect(result!.autoPicked).toBe(true);
+    expect(result!.suggestions.length).toBe(5);
+  });
+
+  it("startVoting picks all when master list < 5", async () => {
+    const { loadStore, startToday, startVoting, setMasterList } = await import("./store");
+    loadStore();
+
+    setMasterList(new Set(["Taco Bell", "Chipotle"]));
+    startToday();
+    const result = startVoting();
+
+    expect(result).toBeDefined();
+    expect(result!.suggestions.length).toBe(2);
+    expect(result!.autoPicked).toBe(true);
+  });
+
+  it("startVoting skips when both suggestions and master list empty", async () => {
+    const { loadStore, startToday, startVoting, setMasterList } = await import("./store");
+    loadStore();
+
+    setMasterList(new Set());
+    startToday();
+    const result = startVoting();
+
+    expect(result).toBeUndefined();
+  });
+
+  it("startToday resets autoPicked flag", async () => {
+    const { loadStore, startToday, startVoting, setMasterList, resetStore } = await import("./store");
+    loadStore();
+
+    setMasterList(new Set(["Taco Bell", "Chipotle", "In-N-Out", "Panda Express", "Subway"]));
+    startToday();
+    const day1 = startVoting();
+    expect(day1!.autoPicked).toBe(true);
+
+    // New day resets autoPicked
+    resetStore();
+    const day2 = startToday();
+    expect(day2!.autoPicked).toBeUndefined();
   });
 
   it("endPoll returns PollResult with correct shape", async () => {
@@ -535,6 +589,53 @@ describe("shared store functions", () => {
     expect(result!.results[1].rank).toBe(2);
     expect(result!.isTie).toBe(false);
     expect(result!.totalVotes).toBe(3);
+  });
+
+  it("endPoll saves runners-up to history", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, toggleVote, endPoll, getWinners } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    addSuggestion("Chipotle");
+    addSuggestion("Panda Express");
+    toggleVote("Taco Bell", "U1");
+    toggleVote("Taco Bell", "U2");
+    toggleVote("Chipotle", "U1");
+    startVoting();
+
+    endPoll();
+
+    const winners = getWinners();
+    expect(winners.length).toBe(1);
+    expect(winners[0].place).toBe("Taco Bell");
+    expect(winners[0].runnersUp).toHaveLength(2);
+    expect(winners[0].runnersUp![0].place).toBe("Chipotle");
+    expect(winners[0].runnersUp![0].votes).toBe(1);
+    expect(winners[0].runnersUp![1].place).toBe("Panda Express");
+    expect(winners[0].runnersUp![1].votes).toBe(0);
+  });
+
+  it("endPoll puts winner first in results even on tie", async () => {
+    const { loadStore, startToday, startVoting, addSuggestion, toggleVote, endPoll } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Chipotle");
+    addSuggestion("Taco Bell");
+    // Both get 2 votes - tie, alphabetically Chipotle first
+    toggleVote("Chipotle", "U1");
+    toggleVote("Chipotle", "U2");
+    toggleVote("Taco Bell", "U3");
+    toggleVote("Taco Bell", "U4");
+    startVoting();
+
+    const result = endPoll();
+
+    expect(result).toBeDefined();
+    // Winner is first in results regardless of alphabetical order
+    expect(result!.results[0].place).toBe(result!.winner.place);
+    expect(result!.results[0].rank).toBe(1);
   });
 
   it("endPoll returns undefined when already ended", async () => {
@@ -645,5 +746,110 @@ describe("schedule config", () => {
     expect(data.schedule.voteTime).toBe("09:00");
     expect(data.schedule.endTime).toBe("11:15");
     expect(data.schedule.enabled).toBe(false);
+  });
+});
+
+describe("getPickCounts", () => {
+  const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
+
+  beforeEach(() => {
+    vi.resetModules();
+    try {
+      if (fs.existsSync(WINNERS_FILE)) fs.unlinkSync(WINNERS_FILE);
+    } catch {
+      // ignore
+    }
+  });
+
+  it("returns counts for entries within window", async () => {
+    const { loadStore, addWinner, getPickCounts } = await import("./store");
+    loadStore();
+
+    const today = new Date().toISOString().split("T")[0];
+    addWinner({
+      date: today,
+      place: "Taco Bell",
+      voteCount: 5,
+      totalVotes: 10,
+      runnersUp: [{ place: "Chipotle", votes: 3 }],
+    });
+
+    const counts = getPickCounts(28);
+    expect(counts.get("Taco Bell")).toBe(1);
+    expect(counts.get("Chipotle")).toBe(1);
+  });
+
+  it("excludes entries outside window", async () => {
+    const { loadStore, addWinner, getPickCounts } = await import("./store");
+    loadStore();
+
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 35);
+    addWinner({
+      date: oldDate.toISOString().split("T")[0],
+      place: "Old Place",
+      voteCount: 2,
+      totalVotes: 5,
+    });
+
+    const counts = getPickCounts(28);
+    expect(counts.get("Old Place")).toBeUndefined();
+  });
+
+  it("handles empty history", async () => {
+    const { loadStore, getPickCounts } = await import("./store");
+    loadStore();
+
+    const counts = getPickCounts(28);
+    expect(counts.size).toBe(0);
+  });
+
+  it("handles missing runnersUp", async () => {
+    const { loadStore, addWinner, getPickCounts } = await import("./store");
+    loadStore();
+
+    const today = new Date().toISOString().split("T")[0];
+    addWinner({
+      date: today,
+      place: "No Runners",
+      voteCount: 3,
+      totalVotes: 3,
+    });
+
+    const counts = getPickCounts(28);
+    expect(counts.get("No Runners")).toBe(1);
+  });
+
+  it("returns 0 for places never in history", async () => {
+    const { loadStore, getPickCounts } = await import("./store");
+    loadStore();
+
+    const counts = getPickCounts(28);
+    expect(counts.get("Never Picked")).toBeUndefined();
+  });
+
+  it("accumulates counts across multiple entries", async () => {
+    const { loadStore, addWinner, getPickCounts } = await import("./store");
+    loadStore();
+
+    const today = new Date().toISOString().split("T")[0];
+    addWinner({
+      date: today,
+      place: "Taco Bell",
+      voteCount: 5,
+      totalVotes: 10,
+      runnersUp: [{ place: "Chipotle", votes: 3 }],
+    });
+    addWinner({
+      date: today,
+      place: "Chipotle",
+      voteCount: 4,
+      totalVotes: 8,
+      runnersUp: [{ place: "Taco Bell", votes: 2 }],
+    });
+
+    const counts = getPickCounts(28);
+    expect(counts.get("Taco Bell")).toBe(2); // winner once, runner-up once
+    expect(counts.get("Chipotle")).toBe(2); // winner once, runner-up once
   });
 });

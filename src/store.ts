@@ -13,6 +13,7 @@ export interface LunchDay {
   pollMessageTs?: string;
   pollEnded?: boolean;
   expandedSuggestions?: string[]; // array for JSON, tracked as Set in-memory
+  autoPicked?: boolean; // true when suggestions were auto-picked from master list
 }
 
 export interface LunchSchedule {
@@ -241,6 +242,11 @@ export function getMasterList(): Set<string> {
   return new Set(store.masterList);
 }
 
+export function setMasterList(places: Set<string>): void {
+  store.masterList = Array.from(places);
+  saveStore();
+}
+
 export function addToMasterList(place: string): void {
   const normalized = place.toLowerCase();
   const existing = store.masterList.findIndex(
@@ -293,6 +299,7 @@ export interface WinnerEntry {
   place: string;
   voteCount: number;
   totalVotes: number;
+  runnersUp?: Array<{ place: string; votes: number }>;
 }
 
 interface WinnerStore {
@@ -333,6 +340,26 @@ export function addWinner(entry: WinnerEntry): void {
   saveWinners();
 }
 
+export function getPickCounts(lastDays = 28): Map<string, number> {
+  const counts = new Map<string, number>();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - lastDays);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  for (const entry of winnersStore.winners) {
+    if (entry.date >= cutoffStr) {
+      counts.set(entry.place, (counts.get(entry.place) ?? 0) + 1);
+      if (entry.runnersUp) {
+        for (const r of entry.runnersUp) {
+          counts.set(r.place, (counts.get(r.place) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  return counts;
+}
+
 // --- Schedule Config ---
 
 export function getSchedule(): LunchSchedule {
@@ -369,6 +396,7 @@ export function startToday(): LunchDay | undefined {
     deadline: DEFAULT_DEADLINE,
     started: true,
     votingStarted: false,
+    autoPicked: undefined,
   };
   setToday(day);
 
@@ -376,16 +404,46 @@ export function startToday(): LunchDay | undefined {
 }
 
 /**
+ * Pick N places from master list using smart-pick logic (least picked first, shuffle ties).
+ * Returns array of place names.
+ */
+export function pickFromMasterList(count: number): string[] {
+  const masterList = getMasterList();
+  const places = Array.from(masterList);
+
+  if (places.length === 0) return [];
+
+  const pickCounts = getPickCounts(28);
+  const sorted = places.sort((a, b) => {
+    const countA = pickCounts.get(a) ?? 0;
+    const countB = pickCounts.get(b) ?? 0;
+    if (countA !== countB) return countA - countB;
+    return Math.random() - 0.5; // shuffle ties
+  });
+
+  return sorted.slice(0, Math.min(count, places.length));
+}
+
+/**
  * Start voting for today.
- * Returns the LunchDay if started, undefined if already started or no suggestions.
+ * Auto-picks from master list if no suggestions. Returns LunchDay if started,
+ * undefined if already started or master list also empty.
  */
 export function startVoting(): LunchDay | undefined {
   const today = store.days[todayKey()];
   if (!today?.started) return undefined;
   if (today.votingStarted) return undefined;
+
+  // Auto-pick from master list if no suggestions
   if (today.suggestions.length === 0) {
-    console.log("[startVoting] no suggestions, skipping");
-    return undefined;
+    const picked = pickFromMasterList(5);
+    if (picked.length === 0) {
+      console.log("[startVoting] no suggestions and master list empty, skipping");
+      return undefined;
+    }
+    today.suggestions.push(...picked);
+    today.autoPicked = true;
+    console.log(`[startVoting] auto-picked ${picked.length} places from master list`);
   }
 
   today.votingStarted = true;
@@ -424,12 +482,20 @@ export function endPoll(): PollResult | undefined {
     : tiedWinners[0];
   const totalVotes = results.reduce((sum, r) => sum + r.votes, 0);
 
-  // Save winner to history
+  // Reorder results so winner is first
+  const others = results.filter((r) => r.place !== winner.place);
+  const ordered = [winner, ...others];
+
+  // Save winner to history with runners-up
+  const runnersUp = others
+    .map((r) => ({ place: r.place, votes: r.votes }));
+
   addWinner({
     date: today.date,
     place: winner.place,
     voteCount: winner.votes,
     totalVotes,
+    runnersUp,
   });
 
   // Mark poll as ended
@@ -438,8 +504,8 @@ export function endPoll(): PollResult | undefined {
   // Build ranked results
   let rank = 1;
   const rankedResults: Array<{ place: string; votes: number; rank: number }> = [];
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
+  for (let i = 0; i < ordered.length; i++) {
+    const r = ordered[i];
     if (i > 0 && r.votes === results[i - 1].votes) {
       // same rank as previous
     } else {

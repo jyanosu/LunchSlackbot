@@ -18,9 +18,15 @@ export default async function handleShowHistory({
   // Sort reverse-chronologically (newest first)
   const sorted = [...winners].sort((a, b) => b.date.localeCompare(a.date));
 
-  let lines = sorted.map(
-    (w) => `${w.date}: 🏆 ${w.place} (${w.voteCount} votes)`
-  );
+  const lines: string[] = [];
+  for (const w of sorted) {
+    lines.push(`${w.date}: 🏆 ${w.place} (${w.voteCount} votes)`);
+    if (w.runnersUp && w.runnersUp.length > 0) {
+      for (const r of w.runnersUp) {
+        lines.push(`  ${r.place} — ${r.votes} vote${r.votes !== 1 ? "s" : ""}`);
+      }
+    }
+  }
 
   await say("📋 *Lunch History*\n\n" + lines.join("\n"));
 }

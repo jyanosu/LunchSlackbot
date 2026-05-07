@@ -135,6 +135,11 @@ export default async function handleVote({
   // Post channel announcement
   const schedule = getSchedule();
   const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
+
+  if (votingDay.autoPicked) {
+    await say(`⚠️ No suggestions received — auto-picked ${votingDay.suggestions.length} places from master list.`);
+  }
+
   await say(`🗳️ Voting is open! Check the poll below and vote using the buttons. Voting closes at ${endTime}.`);
 
   // Build poll message

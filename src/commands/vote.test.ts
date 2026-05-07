@@ -230,6 +230,51 @@ describe("handleVote", () => {
     const sectionBlocks = pollMessage.blocks?.filter((b: any) => b.type === "section");
     expect(sectionBlocks).toHaveLength(1);
   });
+
+  it("shows auto-pick warning when autoPicked is true", async () => {
+    const todayDay = {
+      date: "2025-01-15",
+      suggestions: ["Taco Bell", "Chipotle", "In-N-Out", "Panda Express", "Subway"],
+      deadline: "11:00 AM",
+      started: true,
+      autoPicked: true,
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
+    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
+
+    await handleVote({ say, userId: "U1", channelId: "C1" });
+
+    // First call is auto-pick warning
+    expect(say.mock.calls[0][0]).toContain("⚠️ No suggestions received");
+    expect(say.mock.calls[0][0]).toContain("auto-picked 5 places from master list");
+  });
+
+  it("does not show auto-pick warning when suggestions existed", async () => {
+    const todayDay = {
+      date: "2025-01-15",
+      suggestions: ["Taco Bell"],
+      deadline: "11:00 AM",
+      started: true,
+    };
+    const votingDay = { ...todayDay, votingStarted: true };
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(todayDay);
+    (store.startVoting as ReturnType<typeof vi.fn>).mockReturnValue(votingDay);
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
+    const say = vi.fn().mockResolvedValue({ ts: "1234567890.123456" });
+
+    await handleVote({ say, userId: "U1", channelId: "C1" });
+
+    expect(say.mock.calls[0][0]).not.toContain("auto-picked");
+  });
 });
 
 describe("handleVoteToggle", () => {
