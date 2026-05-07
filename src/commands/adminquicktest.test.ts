@@ -34,6 +34,7 @@ describe("handleAdminQuickTest", () => {
     await handleAdminQuickTest({ say, channelId: "C1" });
 
     expect(say).toHaveBeenCalledWith(expect.stringContaining("🧪 *Quick test started!*"));
+    expect(cron.stopSchedule).toHaveBeenCalled();
   });
 
   it("rejects when round already started", async () => {

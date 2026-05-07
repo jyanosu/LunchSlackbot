@@ -68,17 +68,44 @@ Slash commands must be registered in your Slack app dashboard. Two options:
 | `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
 
-## Docker Deployment
+## Deployment
+
+### Docker (recommended)
+
+**Option 1 — Docker Compose:**
 
 1. Copy `.env.example` to `.env` and fill in your Slack credentials.
-   - `LUNCH_CHANNEL_ID` is required for automated scheduling (set to your Slack channel ID).
 2. From the project root, build and run:
-   ```
+   ```bash
    docker compose up -d
    ```
 3. Override port: `PORT=8080 docker compose up -d`
-4. Data persists in `./data/` volume mount (must run from project root).
-5. Health check: `GET /health` (returns `ok` on port `$PORT`)
+
+**Option 2 — Docker run:**
+
+```bash
+docker build -t lunchbot .
+docker run -d --name lunchbot \
+  -p ${PORT:-3000}:3000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  --restart unless-stopped \
+  lunchbot
+```
+
+**Environment variables:**
+
+| Variable | Required | Description |
+|---|---|---|
+| `SLACK_BOT_TOKEN` | Yes | Bot OAuth token |
+| `SLACK_SIGNING_SECRET` | Yes | Signing secret |
+| `LUNCH_CHANNEL_ID` | Yes (for scheduling) | Slack channel ID for automated cron jobs |
+| `PORT` | No | Listen port (default `3000`) |
+
+**Notes:**
+- Data persists in `./data/` volume mount
+- Health check: `GET /health` returns `ok` on port `$PORT`
+- Must run from project root (volume path is relative)
 
 ### Bare Metal
 
@@ -87,7 +114,16 @@ npm install && npm run build
 PORT=3000 node dist/bot.js
 ```
 
-In your Slack App settings, set **Request URL** to:
+### Render
+
+1. Connect your repo → **New Web Service**
+2. Set **Runtime** to **Docker**
+3. Set env vars: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `LUNCH_CHANNEL_ID`
+4. Request URL: `https://your-app.onrender.com/slack/events`
+
+### In Your Slack App
+
+Set **Request URL** (Events, Interactivity, Slash Commands) to:
 `https://<your-server>/slack/events`
 
 ## Scripts
