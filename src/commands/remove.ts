@@ -1,5 +1,6 @@
-import { getToday, removeSuggestion } from "../store";
+import { getToday, removeSuggestion, getSchedule } from "../store";
 import { add, check } from "../confirmations";
+import { formatTime12 } from "../time-util";
 
 export default async function handleRemove({
   say,
@@ -45,6 +46,7 @@ export default async function handleRemove({
 
   add(userId, channelId, "remove", place);
   await (say as any)({
+    text: `Remove *${place}* from today's suggestions?`,
     blocks: [
       {
         type: "section",
@@ -108,10 +110,10 @@ export async function handleConfirmation({
     const { startToday } = await import("../store");
     const day = startToday();
     if (day) {
-      const deadline = day.deadline || "11:00 AM EST";
+      const voteTime = formatTime12(getSchedule().voteTime);
       await client.chat.postMessage({
         channel: event.channel,
-        text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: ${deadline}.`,
+        text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at ${voteTime} EST.`,
       });
     }
     return;
@@ -186,8 +188,8 @@ export async function handleBlockAction({
       const { startToday } = await import("../store");
       const day = startToday();
       if (day) {
-        const deadline = day.deadline || "11:00 AM EST";
-        const announcement = `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: ${deadline}.`;
+        const voteTime = formatTime12(getSchedule().voteTime);
+        const announcement = `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at ${voteTime} EST.`;
         await client.chat.update({
           channel: channelId,
           ts: messageTs,
@@ -242,6 +244,21 @@ export async function handleBlockAction({
         channel: channelId,
         ts: messageTs,
         text: "🗑️ LunchBot has been reset. Master list preserved.",
+      });
+      return;
+    }
+  }
+
+  if (actionId === "confirm_clearsuggestions") {
+    const clearEntry = check(userId, channelId, "clearsuggestions");
+    if (clearEntry) {
+      console.log("[block_action] clearsuggestions confirmed");
+      const { clearSuggestions } = await import("../store");
+      clearSuggestions();
+      await client.chat.update({
+        channel: channelId,
+        ts: messageTs,
+        text: "🗑️ Suggestions cleared.",
       });
       return;
     }

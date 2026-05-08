@@ -6,9 +6,12 @@ import {
   startVoting,
   endPoll,
   getToday,
+  getExpandedSuggestions,
   type LunchSchedule,
 } from "./store";
+import { formatTime12 } from "./time-util";
 import { routeCommand } from "./handlers";
+import { buildPollBlocks } from "./commands/vote";
 
 const TZ = "America/New_York";
 
@@ -51,12 +54,12 @@ async function runBegin(client: any, channel: string): Promise<void> {
     return;
   }
 
-  const deadline = day.deadline || "11:00 AM EST";
+  const voteTime = formatTime12(getSchedule().voteTime);
   await client.chat.postMessage({
     channel,
-    text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: ${deadline}.`,
+    text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at ${voteTime} EST.`,
   });
-  console.log(`[cron] begin — suggestions open, deadline: ${deadline}`);
+  console.log(`[cron] begin — suggestions open, voting starts at ${voteTime} EST`);
 }
 
 async function runVote(client: any, channel: string): Promise<void> {
@@ -146,9 +149,11 @@ async function runVoteReminder(client: any, channel: string): Promise<void> {
     return;
   }
 
+  const blocks = await buildPollBlocks(today.suggestions, client, undefined, getExpandedSuggestions());
   await client.chat.postMessage({
     channel,
-    text: "⏰ *Reminder:* Voting closes in 5 minutes! Vote now using the poll buttons below.",
+    text: "⏰ *Reminder:* Voting closes in 5 minutes!",
+    blocks,
   });
   console.log("[cron] vote reminder posted");
 }

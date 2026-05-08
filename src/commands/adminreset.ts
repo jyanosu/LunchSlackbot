@@ -17,6 +17,7 @@ export default async function handleAdminreset({
 
   add(userId, channelId, "adminreset", null);
   await (say as any)({
+    text: "Reset LunchBot?",
     blocks: [
       {
         type: "section",

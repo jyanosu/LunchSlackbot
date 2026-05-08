@@ -12,11 +12,16 @@ vi.mock("../store", () => ({
   removeSuggestion: vi.fn(),
   startToday: vi.fn(),
   resetStore: vi.fn(),
+  getSchedule: vi.fn().mockReturnValue({ beginTime: "09:30", voteTime: "10:30", endTime: "11:15", days: "*", enabled: true }),
 }));
 
 vi.mock("../confirmations", () => ({
   add: vi.fn(),
   check: vi.fn(),
+}));
+
+vi.mock("../time-util", () => ({
+  formatTime12: vi.fn().mockReturnValue("10:30 AM"),
 }));
 
 import * as store from "../store";
@@ -48,6 +53,7 @@ describe("remove command", () => {
     await handleRemove({ say, args: "Taco Bell", userId: "U1", channelId: "C1" });
 
     expect(say).toHaveBeenCalledWith({
+      text: "Remove *Taco Bell* from today's suggestions?",
       blocks: [
         {
           type: "section",
@@ -149,7 +155,7 @@ describe("handleConfirmation", () => {
 
     expect(mockPostMessage).toHaveBeenCalledWith({
       channel: "C1",
-      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at 10:30 AM EST.",
     });
   });
 
@@ -202,11 +208,11 @@ describe("handleBlockAction", () => {
     expect(mockUpdate).toHaveBeenCalledWith({
       channel: "C1",
       ts: "1234567890.123456",
-      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at 10:30 AM EST.",
     });
     expect(mockPostMessage).toHaveBeenCalledWith({
       channel: "C1",
-      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at 10:30 AM EST.",
     });
   });
 
@@ -286,6 +292,41 @@ describe("handleBlockAction", () => {
       channel: "C1",
       ts: "1234567890.123456",
       text: "🗑️ LunchBot has been reset. Master list preserved.",
+    });
+  });
+
+  it("clears suggestions on confirm_clearsuggestions button click", async () => {
+    const mockClearSuggestions: ReturnType<typeof vi.fn> = vi.fn().mockReturnValue(true);
+    mockCheck.mockReturnValue({ type: "clearsuggestions", payload: null, timeout: {} as any });
+
+    // Mock dynamic import
+    vi.doMock("../store", () => ({
+      getToday: vi.fn(),
+      removeSuggestion: vi.fn(),
+      startToday: vi.fn(),
+      resetStore: vi.fn(),
+      getSchedule: vi.fn(),
+      clearSuggestions: mockClearSuggestions,
+    }));
+
+    const { handleBlockAction } = await import("./remove");
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_clearsuggestions" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockClearSuggestions).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "🗑️ Suggestions cleared.",
     });
   });
 });

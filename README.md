@@ -65,8 +65,27 @@ Slash commands must be registered in your Slack app dashboard. Two options:
 | `@LunchSlackBot schedulebegin <time>` | `/lsb-schedulebegin` | Set scheduled begin time |
 | `@LunchSlackBot schedulevote <time>` | `/lsb-schedulevote` | Set scheduled vote time |
 | `@LunchSlackBot scheduleend <time>` | `/lsb-scheduleend` | Set scheduled end time |
+| `@LunchSlackBot scheduledays <days>` | `/lsb-scheduledays` | Set which days the schedule runs |
 | `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
+
+## Scheduling
+
+The bot runs on a daily schedule by default. Configure it with:
+
+| Command | Example | Description |
+|---|---|---|
+| `schedulebegin <time>` | `9:00 AM` | When suggestions open |
+| `schedulevote <time>` | `10:30 AM` | When voting opens |
+| `scheduleend <time>` | `11:15 AM` | When voting closes, winner announced |
+| `scheduledays <days>` | `2-3` | Which days to run (cron format) |
+| `schedule` | — | Show current config |
+| `schedule enable` | — | Enable schedule |
+| `schedule disable` | — | Disable schedule |
+
+**Days** (cron day-of-week): `*` = every day, `0`/`7` = Sunday, `1` = Monday, `2-3` = Tue-Wed, `1,3,5` = Mon/Wed/Fri, `1-5` = Mon-Fri.
+
+All times are **EST**. Schedule persists in `data/lunch.json` across restarts.
 
 ## Deployment
 

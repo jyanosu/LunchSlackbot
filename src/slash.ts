@@ -87,6 +87,11 @@ export function registerSlashCommands(app: App) {
     await routeCommand("scheduleend", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
   });
 
+  app.command("/lsb-scheduledays", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("scheduledays", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
+
   app.command("/lsb-schedule", async ({ ack, say, body }) => {
     await ack();
     await routeCommand("schedule", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });

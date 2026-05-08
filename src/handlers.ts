@@ -12,6 +12,7 @@ export const KNOWN_COMMANDS = new Set([
   "showmasterlist",
   "removefrommasterlist",
   "adminreset",
+  "adminclearsuggestions",
   "seedmasterlist",
   "suggestfrommasterlist",
   "endpoll",
@@ -20,6 +21,7 @@ export const KNOWN_COMMANDS = new Set([
   "schedulebegin",
   "schedulevote",
   "scheduleend",
+  "scheduledays",
   "schedule",
   "adminquicktest",
 ]);
@@ -45,6 +47,7 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.showmasterlist = (await import("./commands/showmasterlist")).default;
   handlers.removefrommasterlist = (await import("./commands/removefrommasterlist")).default;
   handlers.adminreset = (await import("./commands/adminreset")).default;
+  handlers.adminclearsuggestions = (await import("./commands/adminclearsuggestions")).default;
   handlers.seedmasterlist = (await import("./commands/seedmasterlist")).default;
   handlers.suggestfrommasterlist = (await import("./commands/suggestfrommasterlist")).default;
   handlers.endpoll = (await import("./commands/endpoll")).default;
@@ -53,6 +56,7 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.schedulebegin = (await import("./commands/schedulebegin")).default;
   handlers.schedulevote = (await import("./commands/schedulevote")).default;
   handlers.scheduleend = (await import("./commands/scheduleend")).default;
+  handlers.scheduledays = (await import("./commands/scheduledays")).default;
   handlers.schedule = (await import("./commands/showschedule")).default;
   handlers.adminquicktest = (await import("./commands/adminquicktest")).default;
 

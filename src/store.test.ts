@@ -393,11 +393,12 @@ describe("store adminreset", () => {
 
   it("getWinners returns entries from file", async () => {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+    const today = new Date().toISOString().split("T")[0];
     fs.writeFileSync(
       WINNERS_FILE,
       JSON.stringify({
         winners: [
-          { date: "2025-01-14", place: "Chipotle", voteCount: 4, totalVotes: 10 },
+          { date: today, place: "Chipotle", voteCount: 4, totalVotes: 10 },
         ],
       }),
       "utf-8"
@@ -851,5 +852,145 @@ describe("getPickCounts", () => {
     const counts = getPickCounts(28);
     expect(counts.get("Taco Bell")).toBe(2); // winner once, runner-up once
     expect(counts.get("Chipotle")).toBe(2); // winner once, runner-up once
+  });
+});
+
+describe("pruneOldWinners", () => {
+  const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
+
+  beforeEach(() => {
+    vi.resetModules();
+    try {
+      if (fs.existsSync(WINNERS_FILE)) fs.unlinkSync(WINNERS_FILE);
+    } catch {
+      // ignore
+    }
+  });
+
+  it("removes entries older than 90 days", async () => {
+    const { loadStore, addWinner, loadWinners, getWinners } = await import("./store");
+    loadStore();
+
+    // Add old entry (100 days ago)
+    const oldDate = new Date();
+    oldDate.setDate(oldDate.getDate() - 100);
+    addWinner({
+      date: oldDate.toISOString().split("T")[0],
+      place: "Old Place",
+      voteCount: 2,
+      totalVotes: 5,
+    });
+
+    // Add recent entry
+    const today = new Date().toISOString().split("T")[0];
+    addWinner({
+      date: today,
+      place: "New Place",
+      voteCount: 3,
+      totalVotes: 5,
+    });
+
+    // Reload triggers pruning
+    loadWinners();
+    const winners = getWinners();
+
+    expect(winners.length).toBe(1);
+    expect(winners[0].place).toBe("New Place");
+  });
+
+  it("keeps entries within 90 days", async () => {
+    const { loadStore, addWinner, loadWinners, getWinners } = await import("./store");
+    loadStore();
+
+    const today = new Date().toISOString().split("T")[0];
+    addWinner({
+      date: today,
+      place: "Recent Place",
+      voteCount: 3,
+      totalVotes: 5,
+    });
+
+    loadWinners();
+    const winners = getWinners();
+
+    expect(winners.length).toBe(1);
+    expect(winners[0].place).toBe("Recent Place");
+  });
+
+  it("keeps entry exactly 90 days old, removes 91 days old", async () => {
+    const { loadStore, addWinner, loadWinners, getWinners } = await import("./store");
+    loadStore();
+
+    // 90 days old — should be kept
+    const day90 = new Date();
+    day90.setDate(day90.getDate() - 90);
+    addWinner({
+      date: day90.toISOString().split("T")[0],
+      place: "Day90",
+      voteCount: 1,
+      totalVotes: 1,
+    });
+
+    // 91 days old — should be removed
+    const day91 = new Date();
+    day91.setDate(day91.getDate() - 91);
+    addWinner({
+      date: day91.toISOString().split("T")[0],
+      place: "Day91",
+      voteCount: 1,
+      totalVotes: 1,
+    });
+
+    loadWinners();
+    const winners = getWinners();
+
+    expect(winners.length).toBe(1);
+    expect(winners[0].place).toBe("Day90");
+  });
+
+  it("handles empty history", async () => {
+    const { loadStore, loadWinners, getWinners } = await import("./store");
+    loadStore();
+
+    loadWinners();
+    const winners = getWinners();
+
+    expect(winners.length).toBe(0);
+  });
+});
+
+describe("clearSuggestions", () => {
+  it("clears suggestions when round active", async () => {
+    const { loadStore, startToday, addSuggestion, clearSuggestions, getToday } = await import("./store");
+    loadStore();
+
+    startToday();
+    addSuggestion("Taco Bell");
+    addSuggestion("Chipotle");
+
+    const result = clearSuggestions();
+
+    expect(result).toBe(true);
+    expect(getToday()!.suggestions.length).toBe(0);
+  });
+
+  it("returns false when no round started", async () => {
+    const { loadStore, clearSuggestions } = await import("./store");
+    loadStore();
+
+    const result = clearSuggestions();
+
+    expect(result).toBe(false);
+  });
+
+  it("returns false when already empty", async () => {
+    const { loadStore, startToday, clearSuggestions } = await import("./store");
+    loadStore();
+
+    startToday();
+
+    const result = clearSuggestions();
+
+    expect(result).toBe(false);
   });
 });

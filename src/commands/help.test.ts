@@ -28,6 +28,7 @@ describe("help command", () => {
         "schedulebegin <time> (/lsb-schedulebegin) - set automatic begin time",
         "schedulevote <time> (/lsb-schedulevote) - set automatic vote time",
         "scheduleend <time> (/lsb-scheduleend) - set automatic end time",
+        "scheduledays <days> (/lsb-scheduledays) - set which days the schedule runs (e.g., 2-3 for Tue-Wed)",
         "help (/lsb-help) - show this message",
       ].join("\n")
     );
