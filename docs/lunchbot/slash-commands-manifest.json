@@ -83,6 +83,36 @@
       "url": "https://<your-server>/slack/events",
       "description": "Show past lunch winners",
       "usage_hint": ""
+    },
+    {
+      "command": "/lsb-schedulebegin",
+      "url": "https://<your-server>/slack/events",
+      "description": "Set scheduled begin time",
+      "usage_hint": "<time>"
+    },
+    {
+      "command": "/lsb-schedulevote",
+      "url": "https://<your-server>/slack/events",
+      "description": "Set scheduled vote time",
+      "usage_hint": "<time>"
+    },
+    {
+      "command": "/lsb-scheduleend",
+      "url": "https://<your-server>/slack/events",
+      "description": "Set scheduled end time",
+      "usage_hint": "<time>"
+    },
+    {
+      "command": "/lsb-scheduledays",
+      "url": "https://<your-server>/slack/events",
+      "description": "Set which days the schedule runs",
+      "usage_hint": "<days>"
+    },
+    {
+      "command": "/lsb-schedule",
+      "url": "https://<your-server>/slack/events",
+      "description": "Show or configure schedule",
+      "usage_hint": "[enable|disable]"
     }
   ]
 }

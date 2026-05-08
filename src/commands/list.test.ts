@@ -4,6 +4,11 @@ let mockGetToday: ReturnType<typeof vi.fn>;
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
+  getSchedule: vi.fn().mockReturnValue({ beginTime: "09:30", voteTime: "10:30", endTime: "11:15", days: "*", enabled: true }),
+}));
+
+vi.mock("../time-util", () => ({
+  formatTime12: vi.fn().mockReturnValue("10:30 AM"),
 }));
 
 import * as store from "../store";
@@ -42,7 +47,7 @@ describe("list command", () => {
     );
   });
 
-  it("shows numbered list with deadline when suggestions exist", async () => {
+  it("shows numbered list with voting start time when suggestions exist", async () => {
     mockGetToday.mockReturnValue({
       date: "2025-01-15",
       suggestions: ["Taco Bell", "Chipotle"],
@@ -54,13 +59,13 @@ describe("list command", () => {
     await handleList({ say });
 
     expect(say).toHaveBeenCalledWith({
-      text: "🍱 Today's lunch suggestions (deadline: 11:00 AM): 1. Chipotle\n2. Taco Bell",
+      text: "🍱 Today's lunch suggestions (voting starts at 10:30 AM EST): 1. Chipotle\n2. Taco Bell",
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: "*🍱 Today's lunch suggestions* (deadline: 11:00 AM):\n1. Chipotle\n2. Taco Bell",
+            text: "*🍱 Today's lunch suggestions* (voting starts at 10:30 AM EST):\n1. Chipotle\n2. Taco Bell",
           },
         },
       ],

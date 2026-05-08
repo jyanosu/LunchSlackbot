@@ -129,9 +129,13 @@ export default async function handleAdminQuickTest({
         return;
       }
 
+      const { buildPollBlocks } = await import("./vote");
+      const { getExpandedSuggestions } = await import("../store");
+      const blocks = await buildPollBlocks(today.suggestions, client, undefined, getExpandedSuggestions());
       await client.chat.postMessage({
         channel: channelId,
-        text: "⏰ *[TEST] Reminder:* Voting closes in 5 minutes! Vote now using the poll buttons below.",
+        text: "⏰ *[TEST] Reminder:* Voting closes in 5 minutes!",
+        blocks,
       });
       console.log("[adminquicktest] voting reminder posted");
     } catch (err) {

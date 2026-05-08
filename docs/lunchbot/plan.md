@@ -18,3 +18,7 @@ Phase plans are in separate files:
 | Phase 13 — Docker Containerization | [spec-phase13.md](./spec-phase13.md) | [plan-phase13.md](./plan-phase13.md) |
 | Phase 14 — Full Results History & Smart Suggestions | [spec-phase14.md](./spec-phase14.md) | [plan-phase14.md](./plan-phase14.md) |
 | Phase 15 — Auto-Pick Suggestions When Voting Starts With None | [spec-phase15.md](./spec-phase15.md) | [plan-phase15.md](./plan-phase15.md) |
+| Phase 16 — Prune History Older Than 3 Months | [spec-phase16.md](./spec-phase16.md) | [plan-phase16.md](./plan-phase16.md) |
+| Phase 17 — Admin Clear Suggestions Command | [spec-phase17.md](./spec-phase17.md) | [plan-phase17.md](./plan-phase17.md) |
+| Phase 18 — Remove Suggestion Deadline | [spec-phase18.md](./spec-phase18.md) | [plan-phase18.md](./plan-phase18.md) |
+| Phase 19 — Schedule Days Command | [spec-phase19.md](./spec-phase19.md) | [plan-phase19.md](./plan-phase19.md) |

@@ -1,7 +1,5 @@
 import { getToday, getVotes, toggleVote, setVotingStarted, setPollMessageTs, setUserName, getUserNames, getSchedule, getExpandedSuggestions } from "../store";
 
-const DEFAULT_DEADLINE = "11:45 AM";
-
 export interface VoteCommandContext {
   say: (text: string) => Promise<unknown>;
   args?: string;
@@ -143,7 +141,6 @@ export default async function handleVote({
   await say(`🗳️ Voting is open! Check the poll below and vote using the buttons. Voting closes at ${endTime}.`);
 
   // Build poll message
-  const deadline = votingDay.deadline || DEFAULT_DEADLINE;
   const blocks = await buildPollBlocks(votingDay.suggestions, client, undefined, getExpandedSuggestions());
 
   const message = await (say as any)({

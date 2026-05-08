@@ -290,6 +290,19 @@ export function setPollEnded(): void {
   saveStore();
 }
 
+/**
+ * Clear all suggestions for today. Returns true if cleared, false if no round or already empty.
+ */
+export function clearSuggestions(): boolean {
+  const today = store.days[todayKey()];
+  if (!today?.started) return false;
+  if (today.suggestions.length === 0) return false;
+
+  today.suggestions = [];
+  saveStore();
+  return true;
+}
+
 // --- Winner History ---
 
 const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
@@ -319,6 +332,20 @@ export function loadWinners(): void {
     }
   } catch {
     // best-effort, silently ignore
+  }
+  pruneOldWinners();
+}
+
+function pruneOldWinners(): void {
+  const before = winnersStore.winners.length;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  winnersStore.winners = winnersStore.winners.filter(w => w.date >= cutoffStr);
+  const pruned = before - winnersStore.winners.length;
+  if (pruned > 0) {
+    console.log(`[store] pruned ${pruned} old winners`);
+    saveWinners();
   }
 }
 
