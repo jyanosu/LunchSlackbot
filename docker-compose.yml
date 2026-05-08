@@ -1,0 +1,10 @@
+# Run from project root: data/ volume mount is relative
+services:
+  lunchbot:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    env_file: .env
+    restart: on-failure

@@ -79,6 +79,22 @@ describe("handleAppMention router", () => {
 
     expect(say).toHaveBeenCalledWith("🍱 *Lunchbot* — lunch suggestion bot");
   });
+
+  it("routes 'history' command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleAppMention({ say, event: { text: "@LunchSlackBot history", user: "U1", channel: "C1" } });
+
+    expect(say).toHaveBeenCalled();
+    expect(say).not.toHaveBeenCalledWith(expect.stringContaining("Unknown command"));
+  });
+
+  it("routes 'endpoll' command", async () => {
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleAppMention({ say, event: { text: "@LunchSlackBot endpoll", user: "U1", channel: "C1" } });
+
+    expect(say).toHaveBeenCalled();
+    expect(say).not.toHaveBeenCalledWith(expect.stringContaining("Unknown command"));
+  });
 });
 
 describe("routeCommand", () => {

@@ -17,7 +17,8 @@ export default async function handleList({
     return;
   }
 
-  const list = today.suggestions.map((s, i) => `${i + 1}. ${s}`).join("\n");
+  const sorted = [...today.suggestions].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "accent" }));
+  const list = sorted.map((s, i) => `${i + 1}. ${s}`).join("\n");
   await (say as any)({
     text: `🍱 Today's lunch suggestions (deadline: ${today.deadline}): ${list}`,
     blocks: [

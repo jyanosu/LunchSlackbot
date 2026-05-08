@@ -1,0 +1,15 @@
+node_modules
+dist
+.git
+.gitignore
+data
+.env
+*.md
+docs
+*.test.ts
+vitest.config.ts
+Procfile
+Dockerfile
+docker-compose.yml
+.dockerignore
+lunchbot.tar

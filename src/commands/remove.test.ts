@@ -2,14 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let mockGetToday: ReturnType<typeof vi.fn>;
 let mockRemoveSuggestion: ReturnType<typeof vi.fn>;
-let mockSetToday: ReturnType<typeof vi.fn>;
+let mockStartToday: ReturnType<typeof vi.fn>;
+let mockResetStore: ReturnType<typeof vi.fn>;
 let mockAdd: ReturnType<typeof vi.fn>;
 let mockCheck: ReturnType<typeof vi.fn>;
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
   removeSuggestion: vi.fn(),
-  setToday: vi.fn(),
+  startToday: vi.fn(),
+  resetStore: vi.fn(),
 }));
 
 vi.mock("../confirmations", () => ({
@@ -24,7 +26,8 @@ import handleRemove, { handleConfirmation, handleBlockAction } from "./remove";
 beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
   mockRemoveSuggestion = store.removeSuggestion as ReturnType<typeof vi.fn>;
-  mockSetToday = store.setToday as ReturnType<typeof vi.fn>;
+  mockStartToday = store.startToday as ReturnType<typeof vi.fn>;
+  mockResetStore = store.resetStore as ReturnType<typeof vi.fn>;
   mockAdd = confirmations.add as ReturnType<typeof vi.fn>;
   mockCheck = confirmations.check as ReturnType<typeof vi.fn>;
   vi.clearAllMocks();
@@ -67,6 +70,18 @@ describe("remove command", () => {
 
     expect(say).toHaveBeenCalledWith("Usage: @LunchSlackBot remove <place>");
     expect(mockAdd).not.toHaveBeenCalled();
+  });
+
+  it("rejects removal when poll ended", async () => {
+    mockGetToday.mockReturnValue({
+      ...todayDay,
+      pollEnded: true,
+    });
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleRemove({ say, args: "Taco Bell", userId: "U1", channelId: "C1" });
+
+    expect(say).toHaveBeenCalledWith("Poll has already ended for today. Start a new round with @LunchSlackBot begin.");
   });
 
   it("shows not found for non-existent place", async () => {
@@ -128,6 +143,7 @@ describe("handleConfirmation", () => {
   });
 
   it("starts round on begin confirmation", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
     await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "yes" }, client: mockClient, ack: mockAck });
 
@@ -154,6 +170,7 @@ describe("handleConfirmation", () => {
   });
 
   it("handles case-insensitive yes", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
     await handleConfirmation({ event: { type: "message", user: "U1", channel: "C1", text: "YES" }, client: mockClient, ack: mockAck });
     expect(mockPostMessage).toHaveBeenCalled();
@@ -163,9 +180,11 @@ describe("handleConfirmation", () => {
 describe("handleBlockAction", () => {
   const mockAck = vi.fn().mockResolvedValue(undefined);
   const mockUpdate = vi.fn().mockResolvedValue({ ok: true });
-  const mockClient = { chat: { update: mockUpdate } };
+  const mockPostMessage = vi.fn().mockResolvedValue({ ok: true });
+  const mockClient = { chat: { update: mockUpdate, postMessage: mockPostMessage } };
 
   it("starts round on confirm_begin button click", async () => {
+    mockStartToday.mockReturnValue({ date: "2025-01-15", suggestions: [], deadline: "11:00 AM EST", started: true });
     mockCheck.mockReturnValue({ type: "begin", payload: null });
 
     await handleBlockAction({
@@ -183,6 +202,10 @@ describe("handleBlockAction", () => {
     expect(mockUpdate).toHaveBeenCalledWith({
       channel: "C1",
       ts: "1234567890.123456",
+      text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
+    });
+    expect(mockPostMessage).toHaveBeenCalledWith({
+      channel: "C1",
       text: "🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Deadline: 11:00 AM EST.",
     });
   });
@@ -242,5 +265,27 @@ describe("handleBlockAction", () => {
     });
 
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("resets store on confirm_adminreset button click", async () => {
+    mockCheck.mockReturnValue({ type: "adminreset", payload: null });
+
+    await handleBlockAction({
+      ack: mockAck,
+      body: {
+        user: { id: "U1" },
+        channel: { id: "C1" },
+        message: { ts: "1234567890.123456" },
+        actions: [{ action_id: "confirm_adminreset" }],
+      },
+      client: mockClient,
+    });
+
+    expect(mockResetStore).toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "🗑️ LunchBot has been reset. Master list preserved.",
+    });
   });
 });

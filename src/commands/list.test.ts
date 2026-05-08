@@ -54,16 +54,44 @@ describe("list command", () => {
     await handleList({ say });
 
     expect(say).toHaveBeenCalledWith({
-      text: "🍱 Today's lunch suggestions (deadline: 11:00 AM): 1. Taco Bell\n2. Chipotle",
+      text: "🍱 Today's lunch suggestions (deadline: 11:00 AM): 1. Chipotle\n2. Taco Bell",
       blocks: [
         {
           type: "section",
           text: {
             type: "mrkdwn",
-            text: "*🍱 Today's lunch suggestions* (deadline: 11:00 AM):\n1. Taco Bell\n2. Chipotle",
+            text: "*🍱 Today's lunch suggestions* (deadline: 11:00 AM):\n1. Chipotle\n2. Taco Bell",
           },
         },
       ],
     });
+  });
+
+  it("sorts suggestions alphabetically (case-insensitive)", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Zoo", "alpha", "Beta"],
+      deadline: "11:00 AM",
+      started: true,
+    });
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleList({ say });
+
+    expect(say).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining("1. alpha"),
+      })
+    );
+    expect(say).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining("2. Beta"),
+      })
+    );
+    expect(say).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining("3. Zoo"),
+      })
+    );
   });
 });

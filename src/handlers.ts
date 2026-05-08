@@ -7,6 +7,21 @@ export const KNOWN_COMMANDS = new Set([
   "remove",
   "list",
   "help",
+  "vote",
+  "showpoll",
+  "showmasterlist",
+  "removefrommasterlist",
+  "adminreset",
+  "seedmasterlist",
+  "suggestfrommasterlist",
+  "endpoll",
+  "showhistory",
+  "history",
+  "schedulebegin",
+  "schedulevote",
+  "scheduleend",
+  "schedule",
+  "adminquicktest",
 ]);
 
 export interface CommandContext {
@@ -25,6 +40,21 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.remove = (await import("./commands/remove")).default;
   handlers.list = (await import("./commands/list")).default;
   handlers.help = (await import("./commands/help")).default;
+  handlers.vote = (await import("./commands/vote")).default;
+  handlers.showpoll = (await import("./commands/showpoll")).default;
+  handlers.showmasterlist = (await import("./commands/showmasterlist")).default;
+  handlers.removefrommasterlist = (await import("./commands/removefrommasterlist")).default;
+  handlers.adminreset = (await import("./commands/adminreset")).default;
+  handlers.seedmasterlist = (await import("./commands/seedmasterlist")).default;
+  handlers.suggestfrommasterlist = (await import("./commands/suggestfrommasterlist")).default;
+  handlers.endpoll = (await import("./commands/endpoll")).default;
+  handlers.showhistory = (await import("./commands/showhistory")).default;
+  handlers.history = handlers.showhistory; // alias
+  handlers.schedulebegin = (await import("./commands/schedulebegin")).default;
+  handlers.schedulevote = (await import("./commands/schedulevote")).default;
+  handlers.scheduleend = (await import("./commands/scheduleend")).default;
+  handlers.schedule = (await import("./commands/showschedule")).default;
+  handlers.adminquicktest = (await import("./commands/adminquicktest")).default;
 
   return handlers;
 }

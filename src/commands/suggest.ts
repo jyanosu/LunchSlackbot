@@ -1,4 +1,4 @@
-import { getToday, addSuggestion } from "../store";
+import { getToday, addSuggestion, addToMasterList } from "../store";
 
 export default async function handleSuggest({
   say,
@@ -25,12 +25,19 @@ export default async function handleSuggest({
     return;
   }
 
+  if (today.pollEnded) {
+    await say("Poll has already ended for today. Start a new round with @LunchSlackBot begin.");
+    return;
+  }
+
   const added = addSuggestion(place);
 
   if (!added) {
     await say(`*${place}* is already suggested.`);
     return;
   }
+
+  addToMasterList(place);
 
   const updated = getToday();
   const list = updated?.suggestions.map((s) => `• ${s}`).join("\n") ?? "";

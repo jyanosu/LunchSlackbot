@@ -1,0 +1,22 @@
+# Unraid docker-compose
+# Place this file in your project directory and run:
+#   docker compose -f docker-compose.unraid.yml up -d
+#
+# Ensure /mnt/user/appdata/lunchbot exists on your Unraid server
+# and copy your .env file to /mnt/user/appdata/lunchbot/config/.env
+
+services:
+  lunchbot:
+    image: forgejo.myprivateone.net/lunchbot:latest
+    container_name: lunchbot
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - /mnt/user/appdata/lunchbot/data:/app/data
+      - /mnt/user/appdata/lunchbot/config/.env:/app/.env:ro
+    environment:
+      - PUID=${PUID:-99}
+      - PGID=${PGID:-100}
+      - TZ=${TZ:-America/New_York}
+    restart: on-failure
+    network_mode: externet

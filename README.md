@@ -4,6 +4,10 @@ Slack bot for lunch place suggestions and voting.
 
 ## Setup
 
+Full Slack app setup instructions: **[docs/lunchbot/README.md](docs/lunchbot/README.md)**
+
+Quick start:
+
 1. Copy `.env.example` to `.env` and fill in your Slack credentials:
    ```
    cp .env.example .env
@@ -24,19 +28,103 @@ Slack bot for lunch place suggestions and voting.
    npm start
    ```
 
-## Render Deployment
+### Installing Slash Commands
 
-1. Push this repo to GitHub.
-2. On [Render](https://render.com), create a **Web Service** from your repo.
-3. Set these environment variables in the Render dashboard:
-   - `SLACK_BOT_TOKEN`
-   - `SLACK_SIGNING_SECRET`
-4. Deploy settings:
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `node dist/bot.js`
-   - (or use the `Procfile` — Render detects it automatically)
-5. In your Slack App settings, set **Request URL** to:
-   `https://your-app-name.onrender.com/slack/events`
+Slash commands must be registered in your Slack app dashboard. Two options:
+
+**Option A — JSON Manifest (recommended):**
+1. Open your Slack app at [api.slack.com/apps](https://api.slack.com/apps)
+2. Go to **Settings** → **App JSON Manifest**
+3. Copy the `slash_commands` array from [`docs/lunchbot/slash-commands-manifest.json`](docs/lunchbot/slash-commands-manifest.json)
+4. Paste it into the manifest's `slash_commands` field
+5. Set each command's **Request URL** to: `https://<your-server>/slack/events`
+
+**Option B — Manual:**
+1. Go to **Slash Commands** in your Slack app dashboard
+2. Click **Create New Command** for each `/lsb-*` command
+3. Set **Request URL** to: `https://<your-server>/slack/events`
+4. After adding commands, **reinstall** the app to your workspace
+
+## Commands
+
+| Command | Slash | Description |
+|---|---|---|
+| `@LunchSlackBot begin` | `/lsb-begin` | Start the lunch poll |
+| `@LunchSlackBot suggest <place>` | `/lsb-suggest` | Add a lunch place |
+| `@LunchSlackBot suggestiondeadline <time>` | `/lsb-deadline` | Set suggestion deadline |
+| `@LunchSlackBot remove <place>` | `/lsb-remove` | Remove a suggestion |
+| `@LunchSlackBot list` | `/lsb-list` | Show today's suggestions |
+| `@LunchSlackBot vote` | `/lsb-vote` | Start voting on suggestions |
+| `@LunchSlackBot showpoll` | `/lsb-showpoll` | Show the current poll |
+| `@LunchSlackBot endpoll` | `/lsb-endpoll` | End voting, announce winner |
+| `@LunchSlackBot history` | `/lsb-showhistory` | Show past winners |
+| `@LunchSlackBot showmasterlist` | `/lsb-showmasterlist` | Show master suggestion list |
+| `@LunchSlackBot removefrommasterlist <place>` | `/lsb-removefrommasterlist` | Remove from master list |
+| `@LunchSlackBot seedmasterlist` | `/lsb-seedmasterlist` | Seed master list with 20 places |
+| `@LunchSlackBot suggestfrommasterlist [n]` | `/lsb-suggestfrommasterlist` | Suggest N random places from master list |
+| `@LunchSlackBot schedulebegin <time>` | `/lsb-schedulebegin` | Set scheduled begin time |
+| `@LunchSlackBot schedulevote <time>` | `/lsb-schedulevote` | Set scheduled vote time |
+| `@LunchSlackBot scheduleend <time>` | `/lsb-scheduleend` | Set scheduled end time |
+| `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
+| `@LunchSlackBot help` | `/lsb-help` | Show help |
+
+## Deployment
+
+### Docker (recommended)
+
+**Option 1 — Docker Compose:**
+
+1. Copy `.env.example` to `.env` and fill in your Slack credentials.
+2. From the project root, build and run:
+   ```bash
+   docker compose up -d
+   ```
+3. Override port: `PORT=8080 docker compose up -d`
+
+**Option 2 — Docker run:**
+
+```bash
+docker build -t lunchbot .
+docker run -d --name lunchbot \
+  -p ${PORT:-3000}:3000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  --restart unless-stopped \
+  lunchbot
+```
+
+**Environment variables:**
+
+| Variable | Required | Description |
+|---|---|---|
+| `SLACK_BOT_TOKEN` | Yes | Bot OAuth token |
+| `SLACK_SIGNING_SECRET` | Yes | Signing secret |
+| `LUNCH_CHANNEL_ID` | Yes (for scheduling) | Slack channel ID for automated cron jobs |
+| `PORT` | No | Listen port (default `3000`) |
+
+**Notes:**
+- Data persists in `./data/` volume mount
+- Health check: `GET /health` returns `ok` on port `$PORT`
+- Must run from project root (volume path is relative)
+
+### Bare Metal
+
+```bash
+npm install && npm run build
+PORT=3000 node dist/bot.js
+```
+
+### Render
+
+1. Connect your repo → **New Web Service**
+2. Set **Runtime** to **Docker**
+3. Set env vars: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `LUNCH_CHANNEL_ID`
+4. Request URL: `https://your-app.onrender.com/slack/events`
+
+### In Your Slack App
+
+Set **Request URL** (Events, Interactivity, Slash Commands) to:
+`https://<your-server>/slack/events`
 
 ## Scripts
 
