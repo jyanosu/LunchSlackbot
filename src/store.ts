@@ -2,7 +2,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 const DATA_DIR = path.join(__dirname, "..", "data");
-const DATA_FILE = path.join(DATA_DIR, "lunch.json");
+const LUNCH_FILE = path.join(DATA_DIR, "lunch.json");
+const DAYS_FILE = path.join(DATA_DIR, "days.json");
+const VOTES_FILE = path.join(DATA_DIR, "votes.json");
 
 export interface LunchDay {
   date: string;
@@ -22,6 +24,7 @@ export interface LunchSchedule {
   endTime: string;      // "HH:MM" 24h, default "11:15"
   days: string;         // cron day-of-week, default "*" (every day)
   enabled: boolean;     // default true
+  pruneDays?: number;   // retention period in days, default 120, min 7
 }
 
 export interface LunchStore {
@@ -53,19 +56,72 @@ function ensureDataDir(): void {
 }
 
 export function loadStore(): void {
+  // Load from new separate files
+  loadDays();
+  loadVotes();
+  loadLunch();
+
+  // Migrate old data if present in lunch.json
+  migrateOldData();
+
+  // Prune old entries
+  pruneOldEntries();
+}
+
+function loadDays(): void {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, "utf-8");
-      const data = JSON.parse(raw) as LunchStore;
+    if (fs.existsSync(DAYS_FILE)) {
+      const raw = fs.readFileSync(DAYS_FILE, "utf-8");
+      const data = JSON.parse(raw) as { days: Record<string, LunchDay> };
       if (data && typeof data.days === "object") {
         Object.assign(store.days, data.days);
       }
+    }
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+function saveDays(): void {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(DAYS_FILE, JSON.stringify({ days: store.days }, null, 2), "utf-8");
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+function loadVotes(): void {
+  try {
+    if (fs.existsSync(VOTES_FILE)) {
+      const raw = fs.readFileSync(VOTES_FILE, "utf-8");
+      const data = JSON.parse(raw) as { votes: Record<string, string[]>, userNames: Record<string, string> };
       if (data && typeof data.votes === "object") {
         Object.assign(store.votes, data.votes);
       }
       if (data && typeof data.userNames === "object") {
         Object.assign(store.userNames, data.userNames);
       }
+    }
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+function saveVotes(): void {
+  try {
+    ensureDataDir();
+    fs.writeFileSync(VOTES_FILE, JSON.stringify({ votes: store.votes, userNames: store.userNames }, null, 2), "utf-8");
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+function loadLunch(): void {
+  try {
+    if (fs.existsSync(LUNCH_FILE)) {
+      const raw = fs.readFileSync(LUNCH_FILE, "utf-8");
+      const data = JSON.parse(raw) as LunchStore;
       if (data && Array.isArray(data.masterList)) {
         store.masterList = data.masterList;
       }
@@ -78,13 +134,109 @@ export function loadStore(): void {
   }
 }
 
-export function saveStore(): void {
+function saveLunch(): void {
   try {
     ensureDataDir();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
+    fs.writeFileSync(LUNCH_FILE, JSON.stringify({
+      masterList: store.masterList,
+      schedule: store.schedule,
+    }, null, 2), "utf-8");
   } catch {
     // best-effort, silently ignore
   }
+}
+
+/**
+ * Migrate old data from lunch.json to new separate files.
+ * Runs once on startup if old format detected.
+ */
+function migrateOldData(): void {
+  try {
+    if (!fs.existsSync(LUNCH_FILE)) return;
+    const raw = fs.readFileSync(LUNCH_FILE, "utf-8");
+    const data = JSON.parse(raw) as LunchStore;
+
+    let needsMigration = false;
+
+    // Migrate days if present
+    if (data && typeof data.days === "object" && Object.keys(data.days).length > 0) {
+      // Merge into existing days (already loaded from days.json if it exists)
+      for (const [key, value] of Object.entries(data.days)) {
+        if (!(key in store.days)) {
+          store.days[key] = value as LunchDay;
+        }
+      }
+      saveDays();
+      needsMigration = true;
+    }
+
+    // Migrate votes if present
+    if (data && typeof data.votes === "object" && Object.keys(data.votes).length > 0) {
+      for (const [key, value] of Object.entries(data.votes)) {
+        if (!(key in store.votes)) {
+          store.votes[key] = value as string[];
+        }
+      }
+      needsMigration = true;
+    }
+
+    // Migrate userNames if present
+    if (data && typeof data.userNames === "object" && Object.keys(data.userNames).length > 0) {
+      for (const [key, value] of Object.entries(data.userNames)) {
+        if (!(key in store.userNames)) {
+          store.userNames[key] = value as string;
+        }
+      }
+      needsMigration = true;
+    }
+
+    if (needsMigration) {
+      saveVotes();
+      // Save cleaned lunch.json (only masterList + schedule)
+      saveLunch();
+    }
+  } catch {
+    // best-effort, silently ignore
+  }
+}
+
+/**
+ * Prune entries older than pruneDays (default 120).
+ */
+function pruneOldEntries(): void {
+  const pruneDays = store.schedule.pruneDays ?? 120;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - pruneDays);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  // Prune days
+  const daysBefore = Object.keys(store.days).length;
+  store.days = Object.fromEntries(
+    Object.entries(store.days).filter(([key]) => key >= cutoffStr)
+  );
+  const daysPruned = daysBefore - Object.keys(store.days).length;
+
+  // Prune votes (keyed by "date:place")
+  const votesBefore = Object.keys(store.votes).length;
+  store.votes = Object.fromEntries(
+    Object.entries(store.votes).filter(([key]) => {
+      const datePrefix = key.split(":")[0];
+      return datePrefix >= cutoffStr;
+    })
+  );
+  const votesPruned = votesBefore - Object.keys(store.votes).length;
+
+  if (daysPruned > 0 || votesPruned > 0) {
+    console.log(`[store] pruned ${daysPruned} old days, ${votesPruned} old votes`);
+    saveDays();
+    saveVotes();
+  }
+}
+
+export function saveStore(): void {
+  saveDays();
+  saveVotes();
+  saveLunch();
 }
 
 function todayKey(): string {
@@ -276,7 +428,9 @@ export function resetStore(): void {
   store.votes = {};
   store.userNames = {};
   // masterList is preserved
-  saveStore();
+  saveDays();
+  saveVotes();
+  saveLunch();
 }
 
 // --- Poll Ended ---

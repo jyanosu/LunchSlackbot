@@ -96,4 +96,9 @@ export function registerSlashCommands(app: App) {
     await ack();
     await routeCommand("schedule", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
   });
+
+  app.command("/lsb-prune", async ({ ack, say, body }) => {
+    await ack();
+    await routeCommand("prune", { say, args: body.text ?? "", userId: body.user_id, channelId: body.channel_id });
+  });
 }
