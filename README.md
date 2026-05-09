@@ -133,13 +133,6 @@ npm install && npm run build
 PORT=3000 node dist/bot.js
 ```
 
-### Render
-
-1. Connect your repo → **New Web Service**
-2. Set **Runtime** to **Docker**
-3. Set env vars: `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `LUNCH_CHANNEL_ID`
-4. Request URL: `https://your-app.onrender.com/slack/events`
-
 ### In Your Slack App
 
 Set **Request URL** (Events, Interactivity, Slash Commands) to:
