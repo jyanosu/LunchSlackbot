@@ -66,6 +66,7 @@ Slash commands must be registered in your Slack app dashboard. Two options:
 | `@LunchSlackBot schedulevote <time>` | `/lsb-schedulevote` | Set scheduled vote time |
 | `@LunchSlackBot scheduleend <time>` | `/lsb-scheduleend` | Set scheduled end time |
 | `@LunchSlackBot scheduledays <days>` | `/lsb-scheduledays` | Set which days the schedule runs |
+| `@LunchSlackBot prune [days]` | `/lsb-prune` | Set prune retention period (default 120 days, min 7) |
 | `@LunchSlackBot schedule` | `/lsb-schedule` | Show schedule config |
 | `@LunchSlackBot help` | `/lsb-help` | Show help |
 
@@ -79,6 +80,7 @@ The bot runs on a daily schedule by default. Configure it with:
 | `schedulevote <time>` | `10:30 AM` | When voting opens |
 | `scheduleend <time>` | `11:15 AM` | When voting closes, winner announced |
 | `scheduledays <days>` | `2-3` | Which days to run (cron format) |
+| `prune [days]` | `90` | Set prune retention period (default 120, min 7) |
 | `schedule` | — | Show current config |
 | `schedule enable` | — | Enable schedule |
 | `schedule disable` | — | Disable schedule |

@@ -22,3 +22,4 @@ Phase specs are in separate files:
 | Phase 17 — Admin Clear Suggestions Command | [spec-phase17.md](./spec-phase17.md) | [plan-phase17.md](./plan-phase17.md) |
 | Phase 18 — Remove Suggestion Deadline | [spec-phase18.md](./spec-phase18.md) | [plan-phase18.md](./plan-phase18.md) |
 | Phase 19 — Schedule Days Command | [spec-phase19.md](./spec-phase19.md) | [plan-phase19.md](./plan-phase19.md) |
+| Phase 20 — Split Days and Votes into Separate Files | [spec-phase20.md](./spec-phase20.md) | [plan-phase20.md](./plan-phase20.md) |

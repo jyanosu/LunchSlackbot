@@ -3,11 +3,17 @@ import * as fs from "fs";
 import * as path from "path";
 
 const DATA_DIR = path.join(__dirname, "..", "data");
-const DATA_FILE = path.join(DATA_DIR, "lunch.json");
+const LUNCH_FILE = path.join(DATA_DIR, "lunch.json");
+const DAYS_FILE = path.join(DATA_DIR, "days.json");
+const VOTES_FILE = path.join(DATA_DIR, "votes.json");
+const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
 
 function cleanup() {
   try {
-    if (fs.existsSync(DATA_FILE)) fs.unlinkSync(DATA_FILE);
+    if (fs.existsSync(LUNCH_FILE)) fs.unlinkSync(LUNCH_FILE);
+    if (fs.existsSync(DAYS_FILE)) fs.unlinkSync(DAYS_FILE);
+    if (fs.existsSync(VOTES_FILE)) fs.unlinkSync(VOTES_FILE);
+    if (fs.existsSync(WINNERS_FILE)) fs.unlinkSync(WINNERS_FILE);
     if (fs.existsSync(DATA_DIR)) fs.rmdirSync(DATA_DIR);
   } catch {
     // ignore
@@ -32,7 +38,7 @@ describe("store", () => {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const today = new Date().toISOString().split("T")[0];
     fs.writeFileSync(
-      DATA_FILE,
+      DAYS_FILE,
       JSON.stringify({
         days: {
           [today]: {
@@ -107,8 +113,8 @@ describe("store", () => {
     const today = new Date().toISOString().split("T")[0];
     setToday({ date: today, suggestions: [], deadline: "11:00 AM", started: true });
     addSuggestion("Taco Bell");
-    expect(fs.existsSync(DATA_FILE)).toBe(true);
-    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    expect(fs.existsSync(DAYS_FILE)).toBe(true);
+    const saved = JSON.parse(fs.readFileSync(DAYS_FILE, "utf-8"));
     expect(saved.days[today].suggestions).toContain("Taco Bell");
   });
 });
@@ -234,7 +240,7 @@ describe("store voting", () => {
     toggleVote("Taco Bell", "U1");
 
     // Read saved data directly
-    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    const saved = JSON.parse(fs.readFileSync(VOTES_FILE, "utf-8"));
     expect(saved.votes).toBeDefined();
     const voteKey = today + ":Taco Bell";
     expect(saved.votes[voteKey]).toContain("U1");
@@ -284,7 +290,7 @@ describe("store masterList", () => {
     addToMasterList("In-N-Out");
 
     // Read saved data directly
-    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    const saved = JSON.parse(fs.readFileSync(LUNCH_FILE, "utf-8"));
     expect(saved.masterList).toContain("In-N-Out");
 
     // Reload and verify
@@ -345,10 +351,11 @@ describe("store adminreset", () => {
 
     resetStore();
 
-    const saved = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-    expect(Object.keys(saved.days)).toHaveLength(0);
-    expect(Object.keys(saved.votes)).toHaveLength(0);
-    expect(Object.keys(saved.userNames)).toHaveLength(0);
+    const daysSaved = JSON.parse(fs.readFileSync(DAYS_FILE, "utf-8"));
+    expect(Object.keys(daysSaved.days)).toHaveLength(0);
+    const votesSaved = JSON.parse(fs.readFileSync(VOTES_FILE, "utf-8"));
+    expect(Object.keys(votesSaved.votes)).toHaveLength(0);
+    expect(Object.keys(votesSaved.userNames)).toHaveLength(0);
   });
 
   // --- Poll Ended ---
@@ -742,7 +749,7 @@ describe("schedule config", () => {
     setSchedule({ beginTime: "08:00", voteTime: "09:00", enabled: false });
 
     // Read file directly to verify persistence (setSchedule calls saveStore)
-    const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(LUNCH_FILE, "utf-8"));
     expect(data.schedule.beginTime).toBe("08:00");
     expect(data.schedule.voteTime).toBe("09:00");
     expect(data.schedule.endTime).toBe("11:15");

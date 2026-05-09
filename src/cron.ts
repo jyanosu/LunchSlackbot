@@ -150,10 +150,17 @@ async function runVoteReminder(client: any, channel: string): Promise<void> {
   }
 
   const blocks = await buildPollBlocks(today.suggestions, client, undefined, getExpandedSuggestions());
+  const reminderBlocks: Array<Record<string, unknown>> = [
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: "⏰ *Reminder:* Voting closes in 5 minutes!" },
+    },
+    ...blocks,
+  ];
   await client.chat.postMessage({
     channel,
     text: "⏰ *Reminder:* Voting closes in 5 minutes!",
-    blocks,
+    blocks: reminderBlocks,
   });
   console.log("[cron] vote reminder posted");
 }

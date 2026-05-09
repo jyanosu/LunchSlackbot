@@ -113,6 +113,12 @@
       "url": "https://<your-server>/slack/events",
       "description": "Show or configure schedule",
       "usage_hint": "[enable|disable]"
+    },
+    {
+      "command": "/lsb-prune",
+      "url": "https://<your-server>/slack/events",
+      "description": "Set prune retention period in days",
+      "usage_hint": "[days]"
     }
   ]
 }
