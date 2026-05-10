@@ -25,6 +25,7 @@ export const KNOWN_COMMANDS = new Set([
   "schedule",
   "adminquicktest",
   "prune",
+  "version",
 ]);
 
 export interface CommandContext {
@@ -61,6 +62,7 @@ export async function loadCommandHandlers(): Promise<Record<string, Function>> {
   handlers.schedule = (await import("./commands/showschedule")).default;
   handlers.adminquicktest = (await import("./commands/adminquicktest")).default;
   handlers.prune = (await import("./commands/prune")).default;
+  handlers.version = (await import("./commands/version")).default;
 
   return handlers;
 }

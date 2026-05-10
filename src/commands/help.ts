@@ -30,6 +30,7 @@ export default async function handleHelp({
       "scheduleend <time> (/lsb-scheduleend) - set automatic end time",
       "scheduledays <days> (/lsb-scheduledays) - set which days the schedule runs (e.g., 2-3 for Tue-Wed)",
       "prune [days] (/lsb-prune) - set prune retention period in days (default 120, min 7)",
+      "version (/lsb-version) - show bot build timestamp",
       "help (/lsb-help) - show this message",
     ].join("\n")
   );

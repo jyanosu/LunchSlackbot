@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/bot.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').writeFileSync('dist/build-info.json', JSON.stringify({timestamp: new Date().toISOString()}))\"",
     "start": "node dist/bot.js",
     "dev": "ts-node src/bot.ts",
     "test": "vitest run"
