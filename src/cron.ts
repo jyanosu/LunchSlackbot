@@ -149,7 +149,7 @@ async function runVoteReminder(client: any, channel: string): Promise<void> {
     return;
   }
 
-  const blocks = await buildPollBlocks(today.suggestions, client, undefined, getExpandedSuggestions());
+  const blocks = await buildPollBlocks(today.suggestions, undefined, client, getExpandedSuggestions());
   const reminderBlocks: Array<Record<string, unknown>> = [
     {
       type: "section",

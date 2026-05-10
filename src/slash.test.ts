@@ -23,7 +23,7 @@ describe("registerSlashCommands", () => {
 
     registerSlashCommands(mockApp);
 
-    expect(mockApp.command).toHaveBeenCalledTimes(20);
+    expect(mockApp.command).toHaveBeenCalledTimes(21);
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-begin", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-suggest", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-deadline", expect.any(Function));
@@ -44,6 +44,7 @@ describe("registerSlashCommands", () => {
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-scheduledays", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-schedule", expect.any(Function));
     expect(mockApp.command).toHaveBeenCalledWith("/lsb-prune", expect.any(Function));
+    expect(mockApp.command).toHaveBeenCalledWith("/lsb-version", expect.any(Function));
   });
 
   it("/lsb-suggest extracts place from body.text", async () => {
