@@ -1,12 +1,13 @@
 import "dotenv/config";
 import { App } from "@slack/bolt";
 import { handleAppMention } from "./handlers";
-import { handleConfirmation, handleBlockAction } from "./commands/remove";
+import { handleBlockAction } from "./commands/remove";
 import { handleVoteToggle } from "./commands/vote";
 import { handleExpandVoters } from "./commands/expandvoters";
 import { loadStore, loadWinners, saveStore } from "./store";
 import { registerSlashCommands } from "./slash";
-import { initSchedule, setBoltApp } from "./cron";
+import { initSchedule } from "./cron";
+import { setBoltApp } from "./app-context";
 
 const { SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET } = process.env;
 
@@ -35,14 +36,13 @@ const app = new App({
 });
 
 app.event("app_mention", handleAppMention);
-app.message(/.*/, handleConfirmation as any);
 app.action(/confirm_/, handleBlockAction as any);
 app.action("vote_toggle", handleVoteToggle as any);
 app.action("expand_voters", handleExpandVoters as any);
 
 registerSlashCommands(app);
 
-console.log("✅ Bot listeners registered: app_mention, message, slash commands");
+console.log("✅ Bot listeners registered: app_mention, block_actions, slash commands");
 
 // Seed store from data/lunch.json if it exists
 loadStore();

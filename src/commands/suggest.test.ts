@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 let mockGetToday: ReturnType<typeof vi.fn>;
 let mockAddSuggestion: ReturnType<typeof vi.fn>;
 let mockAddToMasterList: ReturnType<typeof vi.fn>;
+let mockUpdatePollMessage: ReturnType<typeof vi.fn>;
 
 vi.mock("../store", () => ({
   getToday: vi.fn(),
@@ -10,13 +11,21 @@ vi.mock("../store", () => ({
   addToMasterList: vi.fn(),
 }));
 
+vi.mock("./vote", () => ({
+  updatePollMessage: vi.fn().mockResolvedValue(undefined),
+  buildPollBlocks: vi.fn(),
+  handleVoteToggle: vi.fn(),
+}));
+
 import * as store from "../store";
+import * as vote from "./vote";
 import handleSuggest from "./suggest";
 
 beforeEach(() => {
   mockGetToday = store.getToday as ReturnType<typeof vi.fn>;
   mockAddSuggestion = store.addSuggestion as ReturnType<typeof vi.fn>;
   mockAddToMasterList = store.addToMasterList as ReturnType<typeof vi.fn>;
+  mockUpdatePollMessage = vote.updatePollMessage as ReturnType<typeof vi.fn>;
   vi.clearAllMocks();
 });
 
@@ -159,5 +168,37 @@ describe("suggest command", () => {
     expect(say).toHaveBeenCalledWith(
       expect.stringContaining("• Chipotle")
     );
+  });
+
+  it("calls updatePollMessage when voting started", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell", "Chipotle"],
+      deadline: "11:00 AM",
+      started: true,
+      votingStarted: true,
+    });
+    mockAddSuggestion.mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(mockUpdatePollMessage).toHaveBeenCalled();
+  });
+
+  it("does NOT call updatePollMessage when voting not started", async () => {
+    mockGetToday.mockReturnValue({
+      date: "2025-01-15",
+      suggestions: ["Taco Bell"],
+      deadline: "11:00 AM",
+      started: true,
+      votingStarted: false,
+    });
+    mockAddSuggestion.mockReturnValue(true);
+
+    const say = vi.fn().mockResolvedValue(undefined);
+    await handleSuggest({ say, args: "Chipotle" });
+
+    expect(mockUpdatePollMessage).not.toHaveBeenCalled();
   });
 });

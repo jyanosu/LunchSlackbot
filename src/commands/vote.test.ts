@@ -4,6 +4,7 @@ vi.mock("../store", () => ({
   getToday: vi.fn(),
   startVoting: vi.fn(),
   setPollMessageTs: vi.fn(),
+  setPollChannelId: vi.fn(),
   getVotes: vi.fn(),
   hasVoted: vi.fn(),
   toggleVote: vi.fn(),
@@ -13,8 +14,14 @@ vi.mock("../store", () => ({
   getExpandedSuggestions: vi.fn(),
 }));
 
+vi.mock("../app-context", () => ({
+  getClient: vi.fn(),
+  setBoltApp: vi.fn(),
+}));
+
 import * as store from "../store";
-import handleVote, { handleVoteToggle } from "./vote";
+import * as appContext from "../app-context";
+import handleVote, { handleVoteToggle, updatePollMessage } from "./vote";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -398,5 +405,161 @@ describe("handleVoteToggle", () => {
     });
 
     expect(store.toggleVote).not.toHaveBeenCalled();
+  });
+});
+
+describe("updatePollMessage", () => {
+  const mockClient = {
+    chat: {
+      update: vi.fn().mockResolvedValue({ ok: true }),
+      postMessage: vi.fn().mockResolvedValue({ ts: "9999999.111" }),
+    },
+    users: { info: vi.fn().mockResolvedValue({ ok: true, user: { real_name: "Alice" } }) },
+  };
+
+  beforeEach(() => {
+    (store.getVotes as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getExpandedSuggestions as ReturnType<typeof vi.fn>).mockReturnValue(new Set());
+    (store.getUserNames as ReturnType<typeof vi.fn>).mockReturnValue(new Map<string, string>());
+    (store.getSchedule as ReturnType<typeof vi.fn>).mockReturnValue({ endTime: "11:15" });
+    (appContext.getClient as ReturnType<typeof vi.fn>).mockReturnValue(mockClient);
+    mockClient.chat.update.mockReset();
+    mockClient.chat.postMessage.mockReset();
+  });
+
+  it("updates poll message when voting is active", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: ["Taco Bell", "Chipotle"],
+      pollMessageTs: "1234567890.123456",
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).toHaveBeenCalledWith({
+      channel: "C1",
+      ts: "1234567890.123456",
+      text: "🗳️ *Voting is open!* Closes at 11:15 EST",
+      blocks: expect.any(Array),
+    });
+  });
+
+  it("is no-op when voting not started", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: false,
+      suggestions: ["Taco Bell"],
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
+
+  it("is no-op when poll ended", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: true,
+      suggestions: ["Taco Bell"],
+      pollMessageTs: "1234567890.123456",
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
+
+  it("is no-op when pollMessageTs is missing", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: ["Taco Bell"],
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
+
+  it("is no-op when pollChannelId is missing", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: ["Taco Bell"],
+      pollMessageTs: "1234567890.123456",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
+
+  it("is no-op when client is unavailable", async () => {
+    (appContext.getClient as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: ["Taco Bell"],
+      pollMessageTs: "1234567890.123456",
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.update).not.toHaveBeenCalled();
+  });
+
+  it("posts fresh poll when update fails", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: ["Taco Bell"],
+      pollMessageTs: "1234567890.123456",
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+    const mockUpdateFn = vi.fn().mockRejectedValue(new Error("message not found"));
+    mockClient.chat.update = mockUpdateFn;
+
+    await updatePollMessage();
+
+    expect(mockClient.chat.postMessage).toHaveBeenCalled();
+    const postCall = mockClient.chat.postMessage.mock.calls[0][0] as any;
+    expect(postCall.channel).toBe("C1");
+  });
+
+  it("shows no-suggestions block when suggestions are empty", async () => {
+    (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue({
+      started: true,
+      votingStarted: true,
+      pollEnded: false,
+      suggestions: [],
+      pollMessageTs: "1234567890.123456",
+      pollChannelId: "C1",
+      deadline: "11:45 AM",
+    });
+
+    await updatePollMessage();
+
+    const call = mockClient.chat.update.mock.calls[0][0] as any;
+    expect(call.blocks).toHaveLength(1);
+    expect(call.blocks[0].type).toBe("section");
+    expect(call.blocks[0].text.text).toContain("No suggestions");
   });
 });

@@ -13,6 +13,7 @@ export interface LunchDay {
   started: boolean;
   votingStarted?: boolean;
   pollMessageTs?: string;
+  pollChannelId?: string;
   pollEnded?: boolean;
   expandedSuggestions?: string[]; // array for JSON, tracked as Set in-memory
   autoPicked?: boolean; // true when suggestions were auto-picked from master list
@@ -353,6 +354,15 @@ export function setPollMessageTs(ts: string): void {
   if (!day) return;
 
   day.pollMessageTs = ts;
+  saveStore();
+}
+
+export function setPollChannelId(channelId: string): void {
+  const key = todayKey();
+  const day = store.days[key];
+  if (!day) return;
+
+  day.pollChannelId = channelId;
   saveStore();
 }
 

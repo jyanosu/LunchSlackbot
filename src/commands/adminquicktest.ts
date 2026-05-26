@@ -1,5 +1,5 @@
 import { getToday, startToday, startVoting, addSuggestion, endPoll, setPollMessageTs, setDeadline } from "../store";
-import { getClient } from "../cron";
+import { getClient } from "../app-context";
 
 export default async function handleAdminQuickTest({
   say,

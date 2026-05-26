@@ -9,13 +9,17 @@ vi.mock("../store", () => ({
   setPollMessageTs: vi.fn(),
 }));
 
-vi.mock("../cron", () => ({
+vi.mock("../app-context", () => ({
   getClient: vi.fn(),
+  setBoltApp: vi.fn(),
+}));
+
+vi.mock("../cron", () => ({
   stopSchedule: vi.fn(),
 }));
 
 import * as store from "../store";
-import * as cron from "../cron";
+import * as appContext from "../app-context";
 import handleAdminQuickTest from "./adminquicktest";
 
 beforeEach(() => {
@@ -26,7 +30,7 @@ beforeEach(() => {
 describe("handleAdminQuickTest", () => {
   it("starts test when no round in progress", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
-    (cron.getClient as ReturnType<typeof vi.fn>).mockReturnValue({
+    (appContext.getClient as ReturnType<typeof vi.fn>).mockReturnValue({
       chat: { postMessage: vi.fn().mockResolvedValue({ ts: "123" }) },
     });
     const say = vi.fn().mockResolvedValue(undefined);
@@ -34,7 +38,8 @@ describe("handleAdminQuickTest", () => {
     await handleAdminQuickTest({ say, channelId: "C1" });
 
     expect(say).toHaveBeenCalledWith(expect.stringContaining("🧪 *Quick test started!*"));
-    expect(cron.stopSchedule).toHaveBeenCalled();
+    const { stopSchedule } = await import("../cron");
+    expect(stopSchedule).toHaveBeenCalled();
   });
 
   it("rejects when round already started", async () => {
@@ -61,7 +66,7 @@ describe("handleAdminQuickTest", () => {
 
   it("rejects when client is unavailable", async () => {
     (store.getToday as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
-    (cron.getClient as ReturnType<typeof vi.fn>).mockReturnValue(null);
+    (appContext.getClient as ReturnType<typeof vi.fn>).mockReturnValue(null);
     const say = vi.fn().mockResolvedValue(undefined);
 
     await handleAdminQuickTest({ say, channelId: "C1" });

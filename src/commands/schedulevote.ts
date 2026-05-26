@@ -24,6 +24,6 @@ export default async function handleScheduleVote({
   }
 
   setSchedule({ voteTime: time24 });
-  restartSchedule();
+  await restartSchedule();
   await say(`Vote time set to ${formatTime12(time24)} EST.`);
 }

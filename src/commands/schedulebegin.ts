@@ -24,6 +24,6 @@ export default async function handleScheduleBegin({
   }
 
   setSchedule({ beginTime: time24 });
-  restartSchedule();
+  await restartSchedule();
   await say(`Begin time set to ${formatTime12(time24)} EST.`);
 }

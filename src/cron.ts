@@ -20,7 +20,6 @@ let voteJob: ScheduledTask | null = null;
 let endJob: ScheduledTask | null = null;
 let suggestReminderJob: ScheduledTask | null = null;
 let voteReminderJob: ScheduledTask | null = null;
-let boltApp: App | null = null;
 
 function buildCronExpression(time: string, days: string): string {
   const [hours, minutes] = time.split(":");
@@ -96,6 +95,8 @@ async function runVote(client: any, channel: string): Promise<void> {
 
   if (message?.ts) {
     setPollMessageTs(message.ts);
+    const { setPollChannelId } = await import("./store");
+    setPollChannelId(channel);
   }
 
   console.log(`[cron] vote — voting open, closes at ${endTime}`);
@@ -199,21 +200,15 @@ export function stopSchedule(): void {
   if (voteReminderJob) { voteReminderJob.stop(); voteReminderJob = null; }
 }
 
-export function setBoltApp(app: App): void {
-  boltApp = app;
-}
-
-export function getClient(): any {
-  return boltApp?.client ?? null;
-}
-
-export function restartSchedule(): void {
-  if (!boltApp) {
+export async function restartSchedule(): Promise<void> {
+  const { getClient } = await import("./app-context");
+  const app = getClient();
+  if (!app) {
     console.warn("[schedule] cannot restart — app not set");
     return;
   }
   stopSchedule();
-  initSchedule(boltApp);
+  initSchedule(app);
 }
 
 export function initSchedule(app: App): void {
