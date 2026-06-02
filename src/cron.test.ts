@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
+vi.mock("./app-context", () => ({
+  getClient: vi.fn(() => null),
+  setBoltApp: vi.fn(),
+}));
+
 const DATA_DIR = path.join(__dirname, "..", "data");
 const DATA_FILE = path.join(DATA_DIR, "lunch.json");
 const WINNERS_FILE = path.join(DATA_DIR, "winners.json");
@@ -25,23 +30,31 @@ describe("cron schedule", () => {
   });
 
   it("getClient returns null when app not set", async () => {
-    const { getClient } = await import("./cron");
-    expect(getClient()).toBeNull();
+    const actual = await vi.importActual<{
+      getClient: () => any;
+      setBoltApp: (app: any) => void;
+    }>("./app-context");
+    // Reset state
+    actual.setBoltApp(null as any);
+    expect(actual.getClient()).toBeNull();
   });
 
   it("getClient returns client after setBoltApp", async () => {
-    const { setBoltApp, getClient } = await import("./cron");
+    const actual = await vi.importActual<{
+      getClient: () => any;
+      setBoltApp: (app: any) => void;
+    }>("./app-context");
 
     const mockClient = { chat: { postMessage: vi.fn() } };
     const mockApp = { client: mockClient } as any;
-    setBoltApp(mockApp);
+    actual.setBoltApp(mockApp);
 
-    expect(getClient()).toBe(mockClient);
+    expect(actual.getClient()).toBe(mockClient);
   });
 
   it("restartSchedule no-ops when app not set", async () => {
     const { restartSchedule } = await import("./cron");
-    expect(() => restartSchedule()).not.toThrow();
+    await expect(restartSchedule()).resolves.not.toThrow();
   });
 
   it("stopSchedule is idempotent", async () => {

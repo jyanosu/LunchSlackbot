@@ -148,9 +148,11 @@ export default async function handleVote({
     blocks,
   });
 
-  // Save the message ts for updates
+  // Save the message ts and channel for updates
   if (message?.ts) {
     setPollMessageTs(message.ts);
+    const { setPollChannelId } = await import("../store");
+    setPollChannelId(channelId);
   }
 }
 
@@ -232,4 +234,83 @@ export async function handleVoteToggle({
     text: `🗳️ *Voting is open!* Closes at ${endTime2}`,
     blocks,
   });
+}
+
+/**
+ * Rebuild poll blocks from current suggestions and update the saved poll message.
+ * No-op when voting is not active, pollMessageTs is missing, channelId is missing, or client is unavailable.
+ * Falls back to posting a fresh poll if the saved message cannot be updated.
+ */
+export async function updatePollMessage(): Promise<void> {
+  const today = getToday();
+  if (!today?.votingStarted || today.pollEnded) {
+    return;
+  }
+
+  const pollMessageTs = today.pollMessageTs;
+  if (!pollMessageTs) {
+    console.log("[updatePollMessage] no pollMessageTs set, skipping");
+    return;
+  }
+
+  const channelId = today.pollChannelId;
+  if (!channelId) {
+    console.warn("[updatePollMessage] pollChannelId not set, skipping");
+    return;
+  }
+
+  const { getClient } = await import("../app-context");
+  const client = getClient();
+  if (!client) {
+    console.warn("[updatePollMessage] no client available, skipping");
+    return;
+  }
+
+  const schedule = getSchedule();
+  const endTime = schedule.endTime ? `${schedule.endTime} EST` : "not set";
+
+  let blocks: Array<Record<string, unknown>>;
+
+  if (today.suggestions.length === 0) {
+    blocks = [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "No suggestions. Use @LunchSlackBot suggest <place> to add one.",
+        },
+      },
+    ];
+  } else {
+    blocks = await buildPollBlocks(
+      today.suggestions,
+      undefined,
+      client,
+      getExpandedSuggestions()
+    );
+  }
+
+  try {
+    await client.chat.update({
+      channel: channelId,
+      ts: pollMessageTs,
+      text: `🗳️ *Voting is open!* Closes at ${endTime}`,
+      blocks,
+    });
+    console.log("[updatePollMessage] poll updated");
+  } catch {
+    console.log("[updatePollMessage] update failed, posting fresh poll");
+    try {
+      const message = await client.chat.postMessage({
+        channel: channelId,
+        text: `🗳️ *Voting is open!* Closes at ${endTime}`,
+        blocks,
+      });
+      if (message?.ts) {
+        setPollMessageTs(message.ts);
+      }
+    } catch (err) {
+      console.error("[updatePollMessage] fresh post also failed:", err);
+    }
+  }
 }

@@ -20,7 +20,7 @@ export default async function handleShowSchedule({
       return;
     }
     setSchedule({ enabled: true });
-    restartSchedule();
+    await restartSchedule();
     await say("Schedule enabled.");
     return;
   }

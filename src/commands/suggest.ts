@@ -42,4 +42,10 @@ export default async function handleSuggest({
   const updated = getToday();
   const list = updated?.suggestions.map((s) => `• ${s}`).join("\n") ?? "";
   await say(`✅ Added *${place}*.\n\nCurrent suggestions:\n${list}`);
+
+  // Sync poll message if voting is active
+  if (today.votingStarted && !today.pollEnded) {
+    const { updatePollMessage } = await import("./vote");
+    await updatePollMessage();
+  }
 }

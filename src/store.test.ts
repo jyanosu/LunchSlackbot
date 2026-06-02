@@ -198,6 +198,15 @@ describe("store voting", () => {
     expect(getToday()?.pollMessageTs).toBe("1234567890.123456");
   });
 
+  it("setPollChannelId saves channelId", async () => {
+    const { loadStore, setToday, setPollChannelId, getToday } = await import("./store");
+    loadStore();
+    const today = new Date().toISOString().split("T")[0];
+    setToday({ date: today, suggestions: ["Taco Bell"], deadline: "11:00 AM", started: true, votingStarted: true });
+    setPollChannelId("C123");
+    expect(getToday()?.pollChannelId).toBe("C123");
+  });
+
   it("getExpandedSuggestions returns empty set when not set", async () => {
     const { loadStore, setToday, getExpandedSuggestions } = await import("./store");
     loadStore();

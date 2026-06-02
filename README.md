@@ -85,7 +85,7 @@ The bot runs on a daily schedule by default. Configure it with:
 | `schedule enable` | — | Enable schedule |
 | `schedule disable` | — | Disable schedule |
 
-**Days** (cron day-of-week): `*` = every day, `0`/`7` = Sunday, `1` = Monday, `2-3` = Tue-Wed, `1,3,5` = Mon/Wed/Fri, `1-5` = Mon-Fri.
+**Days** (cron day-of-week): `*` = every day, `0`/`7` = Sunday, `1` = Monday, `2-3` = Tue-Wed, `1,3,5` = Mon/Wed/Fri, `1-5` = Mon-Fri. Validation is strict: digits must be 0–7, ranges must be low-to-high (e.g., `1-5` ok, `5-1` rejected), no spaces inside lists (`1,3,5` ok, `1, 3, 5` rejected).
 
 All times are **EST**. Schedule persists in `data/lunch.json` across restarts.
 

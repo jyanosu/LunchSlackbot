@@ -66,83 +66,6 @@ export default async function handleRemove({
 }
 
 /**
- * Shared confirmation listener for both `begin` and `remove` commands.
- */
-export async function handleConfirmation({
-  event,
-  client,
-  ack,
-}: {
-  event: { type: string; user?: string; channel?: string; text?: string; bot_id?: string };
-  client: any;
-  ack: () => Promise<void>;
-}) {
-  await ack();
-
-  console.log("[confirmation] message event received", {
-    text: event.text,
-    bot_id: event.bot_id,
-    user: event.user,
-    channel: event.channel,
-  });
-
-  // Skip bot messages
-  if (event.bot_id) {
-    console.log("[confirmation] skipping bot message");
-    return;
-  }
-
-  if (!event.user || !event.channel) {
-    console.log("[confirmation] missing user or channel");
-    return;
-  }
-
-  const text = (event.text ?? "").trim().toLowerCase();
-  if (text !== "yes") {
-    console.log(`[confirmation] text "${text}" is not "yes", ignoring`);
-    return;
-  }
-
-  // Check begin confirmation
-  const beginEntry = check(event.user, event.channel, "begin");
-  if (beginEntry) {
-    console.log("[confirmation] begin confirmed");
-    const { startToday } = await import("../store");
-    const day = startToday();
-    if (day) {
-      const voteTime = formatTime12(getSchedule().voteTime);
-      await client.chat.postMessage({
-        channel: event.channel,
-        text: `🍱 Lunch suggestions are open! Use @LunchSlackBot suggest <place> to add a place. Voting starts at ${voteTime} EST.`,
-      });
-    }
-    return;
-  }
-
-  // Check remove confirmation
-  const removeEntry = check(event.user, event.channel, "remove");
-  if (removeEntry) {
-    console.log("[confirmation] remove confirmed");
-    const place = removeEntry.payload as string;
-    const removed = removeSuggestion(place);
-    if (removed) {
-      await client.chat.postMessage({
-        channel: event.channel,
-        text: `✅ Removed *${place}* from today's suggestions.`,
-      });
-    } else {
-      await client.chat.postMessage({
-        channel: event.channel,
-        text: `Sorry, *${place}* was not found in today's suggestions.`,
-      });
-    }
-    return;
-  }
-
-  console.log("[confirmation] no pending confirmation for this user/channel");
-}
-
-/**
  * Button-based confirmation handler (block_actions).
  * More reliable than message events.
  */
@@ -229,6 +152,14 @@ export async function handleBlockAction({
           text: `Sorry, *${place}* was not found in today's suggestions.`,
         });
       }
+      // Sync poll message if voting is active
+      if (removed) {
+        const today2 = getToday();
+        if (today2?.votingStarted && !today2.pollEnded) {
+          const { updatePollMessage } = await import("./vote");
+          await updatePollMessage();
+        }
+      }
       return;
     }
   }
@@ -260,6 +191,12 @@ export async function handleBlockAction({
         ts: messageTs,
         text: "🗑️ Suggestions cleared.",
       });
+      // Sync poll message if voting is active
+      const today2 = getToday();
+      if (today2?.votingStarted && !today2.pollEnded) {
+        const { updatePollMessage } = await import("./vote");
+        await updatePollMessage();
+      }
       return;
     }
   }

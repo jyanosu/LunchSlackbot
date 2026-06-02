@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../store", () => ({
   getToday: vi.fn(),
   setPollMessageTs: vi.fn(),
+  setPollChannelId: vi.fn(),
   getVotes: vi.fn(),
   hasVoted: vi.fn(),
   getUserNames: vi.fn(),

@@ -43,9 +43,12 @@ export default async function handleShowpoll({
     blocks,
   });
 
-  // Save the message ts for future updates
+  // Save the message ts and channel for future updates
   if (message?.ts) {
-    const { setPollMessageTs } = await import("../store");
+    const { setPollMessageTs, setPollChannelId } = await import("../store");
     setPollMessageTs(message.ts);
+    if (channelId) {
+      setPollChannelId(channelId);
+    }
   }
 }
