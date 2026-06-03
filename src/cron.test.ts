@@ -4,6 +4,7 @@ import * as path from "path";
 
 vi.mock("./app-context", () => ({
   getClient: vi.fn(() => null),
+  getApp: vi.fn(() => null),
   setBoltApp: vi.fn(),
 }));
 

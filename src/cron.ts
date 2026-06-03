@@ -201,8 +201,8 @@ export function stopSchedule(): void {
 }
 
 export async function restartSchedule(): Promise<void> {
-  const { getClient } = await import("./app-context");
-  const app = getClient();
+  const { getApp } = await import("./app-context");
+  const app = getApp();
   if (!app) {
     console.warn("[schedule] cannot restart — app not set");
     return;
