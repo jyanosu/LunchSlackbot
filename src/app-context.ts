@@ -1,9 +1,13 @@
-import { App } from "@slack/bolt";
+import type { App } from "@slack/bolt";
 
 let boltApp: App | null = null;
 
-export function setBoltApp(app: App): void {
+export function setBoltApp(app: App | null): void {
   boltApp = app;
+}
+
+export function getBoltApp(): App | null {
+  return boltApp;
 }
 
 export function getClient(): any {
